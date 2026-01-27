@@ -1,0 +1,102 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;500;600&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-display: 'Playfair Display', serif;
+  --font-body: 'DM Sans', sans-serif;
+
+  /* Luxury Theme - Light Mode */
+  --background: 40 20% 99%;
+  --foreground: 220 15% 15%; /* Deep Charcoal */
+
+  --card: 0 0% 100%;
+  --card-foreground: 220 15% 15%;
+ 
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 15% 15%;
+ 
+  --primary: 220 30% 20%; /* Midnight Blue */
+  --primary-foreground: 40 20% 98%;
+ 
+  --secondary: 40 20% 94%; /* Soft Cream */
+  --secondary-foreground: 220 30% 20%;
+ 
+  --muted: 40 10% 94%;
+  --muted-foreground: 220 10% 45%;
+ 
+  --accent: 35 30% 50%; /* Gold/Bronze Accent */
+  --accent-foreground: 40 20% 98%;
+ 
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+
+  --border: 220 10% 90%;
+  --input: 220 10% 90%;
+  --ring: 220 30% 20%;
+ 
+  --radius: 0.5rem;
+}
+ 
+.dark {
+  /* Luxury Theme - Dark Mode */
+  --background: 220 30% 12%;
+  --foreground: 40 20% 96%;
+ 
+  --card: 220 30% 15%;
+  --card-foreground: 40 20% 96%;
+ 
+  --popover: 220 30% 15%;
+  --popover-foreground: 40 20% 96%;
+ 
+  --primary: 40 30% 85%; /* Soft Champagne */
+  --primary-foreground: 220 30% 12%;
+ 
+  --secondary: 220 25% 20%;
+  --secondary-foreground: 40 20% 96%;
+ 
+  --muted: 220 25% 20%;
+  --muted-foreground: 220 10% 65%;
+ 
+  --accent: 35 40% 60%; /* Bronze */
+  --accent-foreground: 220 30% 12%;
+ 
+  --destructive: 0 62% 30%;
+  --destructive-foreground: 210 40% 98%;
+ 
+  --border: 220 25% 25%;
+  --input: 220 25% 25%;
+  --ring: 40 30% 85%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-accent/20 selection:text-foreground;
+    font-family: var(--font-body);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    @apply tracking-tight font-medium;
+  }
+}
+
+/* Custom Animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
