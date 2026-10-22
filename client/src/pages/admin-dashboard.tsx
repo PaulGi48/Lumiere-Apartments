@@ -296,10 +296,12 @@ export default function AdminDashboard() {
                         {booking.status === 'pending' && (
                           <>
                             <Button size="icon" variant="ghost" className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              aria-label={`Confirm booking ${booking.id}`}
                               onClick={() => updateBooking.mutate({ id: booking.id, status: 'confirmed' })}>
                               <Check className="w-4 h-4" />
                             </Button>
                             <Button size="icon" variant="ghost" className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                              aria-label={`Cancel booking ${booking.id}`}
                               onClick={() => updateBooking.mutate({ id: booking.id, status: 'cancelled' })}>
                               <X className="w-4 h-4" />
                             </Button>

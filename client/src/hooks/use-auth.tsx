@@ -42,7 +42,15 @@ function useRegisterMutation() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(userData),
       });
-      if (!res.ok) throw new Error("Registration failed");
+      if (!res.ok) {
+        const payload = await res.json().catch(() => null) as { message?: unknown } | null;
+        const message = typeof payload?.message === "string"
+          ? payload.message
+          : res.status >= 500
+            ? "Signup is temporarily unavailable. Please try again later."
+            : "We couldn’t create your account. Check your details and try again.";
+        throw new Error(message);
+      }
       return await res.json();
     },
     onSuccess: (user) => {

@@ -19,6 +19,7 @@ const loginSchema = z.object({
 });
 
 const registerSchema = insertUserSchema.extend({
+  password: z.string().min(12, "Use at least 12 characters"),
   confirmPassword: z.string()
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
@@ -31,7 +32,13 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (user) {
-      setLocation("/");
+      if (user.role === "admin" || user.role === "manager") {
+        setLocation("/admin");
+      } else if (user.role === "support") {
+        setLocation("/support");
+      } else {
+        setLocation("/profile");
+      }
     }
   }, [user, setLocation]);
 
@@ -71,8 +78,8 @@ export default function AuthPage() {
 
           <Card className="shadow-2xl border-none">
             <CardHeader className="text-center pb-2">
-              <CardTitle className="font-display text-2xl">Get Started</CardTitle>
-              <CardDescription>Login or create an account to book your stay</CardDescription>
+              <CardTitle className="font-display text-2xl">Sign in to Lumiere</CardTitle>
+              <CardDescription>Sign in to manage your bookings or create a customer account.</CardDescription>
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="login" className="w-full">
@@ -84,6 +91,11 @@ export default function AuthPage() {
                 <TabsContent value="login">
                   <Form {...loginForm}>
                     <form onSubmit={loginForm.handleSubmit((data) => loginMutation.mutate(data))} className="space-y-4">
+                      {loginMutation.isError && (
+                        <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                          Sign-in failed. Check your username and password, then try again.
+                        </p>
+                      )}
                       <FormField
                         control={loginForm.control}
                         name="username"
@@ -121,6 +133,13 @@ export default function AuthPage() {
                 <TabsContent value="register">
                   <Form {...registerForm}>
                     <form onSubmit={registerForm.handleSubmit((data) => registerMutation.mutate(data))} className="space-y-4">
+                      {registerMutation.isError && (
+                        <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                          {registerMutation.error instanceof Error
+                            ? registerMutation.error.message
+                            : "We couldn’t create your account. Check your details and try again."}
+                        </p>
+                      )}
                       <FormField
                         control={registerForm.control}
                         name="name"
@@ -197,6 +216,9 @@ export default function AuthPage() {
                   </Form>
                 </TabsContent>
               </Tabs>
+              <p className="mt-5 text-center text-xs text-muted-foreground">
+                Public sign-up creates a customer account. Admin and staff access must be assigned by the site owner.
+              </p>
             </CardContent>
           </Card>
         </div>

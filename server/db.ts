@@ -27,7 +27,8 @@ const pool = new Pool({
 
 pool.on("error", (error) => {
   // Never log connection strings or other environment values.
-  console.error("Unexpected idle database client error:", error.code ?? error.name);
+  const errorCode = "code" in error ? String(error.code) : error.name;
+  console.error("Unexpected idle database client error:", errorCode);
 });
 
 const db = drizzle(pool, { schema });

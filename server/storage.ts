@@ -84,12 +84,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createApartment(apartment: InsertApartment): Promise<Apartment> {
-    const [newApartment] = await db.insert(apartments).values(apartment).returning();
+    // The generated Zod input type for JSONB arrays is broader than Drizzle's
+    // insert type; the API validates this object before it reaches storage.
+    const [newApartment] = await db.insert(apartments)
+      .values(apartment as unknown as typeof apartments.$inferInsert)
+      .returning();
     return newApartment;
   }
 
   async updateApartment(id: number, updates: Partial<InsertApartment>): Promise<Apartment | undefined> {
-    const [updated] = await db.update(apartments).set(updates).where(eq(apartments.id, id)).returning();
+    const [updated] = await db.update(apartments)
+      .set(updates as unknown as Partial<typeof apartments.$inferInsert>)
+      .where(eq(apartments.id, id))
+      .returning();
     return updated;
   }
 

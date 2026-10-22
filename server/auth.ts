@@ -5,7 +5,7 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
-import { User } from "@shared/schema";
+import { insertUserSchema, User } from "@shared/schema";
 
 const scryptAsync = promisify(scrypt);
 
@@ -31,6 +31,11 @@ async function comparePasswords(supplied: string, stored: string) {
 function toPublicUser(user: User) {
   const { password: _password, ...publicUser } = user;
   return publicUser;
+}
+
+function getDatabaseErrorCode(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null || !("code" in error)) return undefined;
+  return String(error.code);
 }
 
 export function setupAuth(app: Express) {
@@ -88,14 +93,22 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
-      const existingUser = await storage.getUserByUsername(req.body.username);
-      if (existingUser) {
-        return res.status(400).send("Username already exists");
+      const parsedUser = insertUserSchema.safeParse(req.body);
+      if (!parsedUser.success) {
+        return res.status(400).json({ message: "Please check the registration details" });
+      }
+      if (parsedUser.data.password.length < 12) {
+        return res.status(400).json({ message: "Password must be at least 12 characters" });
       }
 
-      const hashedPassword = await hashPassword(req.body.password);
+      const existingUser = await storage.getUserByUsername(parsedUser.data.username);
+      if (existingUser) {
+        return res.status(409).json({ message: "Username already exists" });
+      }
+
+      const hashedPassword = await hashPassword(parsedUser.data.password);
       const user = await storage.createUser({
-        ...req.body,
+        ...parsedUser.data,
         password: hashedPassword,
         role: "customer", // Default role
       });
@@ -105,6 +118,14 @@ export function setupAuth(app: Express) {
         res.status(201).json(toPublicUser(user));
       });
     } catch (err) {
+      const databaseErrorCode = getDatabaseErrorCode(err);
+      if (databaseErrorCode === "28P01" || databaseErrorCode === "ECONNREFUSED" || databaseErrorCode === "ETIMEDOUT") {
+        console.error("Signup database connection failed:", databaseErrorCode);
+        return res.status(503).json({ message: "Signup is temporarily unavailable because the database connection failed." });
+      }
+      if (databaseErrorCode === "23505") {
+        return res.status(409).json({ message: "Username already exists" });
+      }
       next(err);
     }
   });
