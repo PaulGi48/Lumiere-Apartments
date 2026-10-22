@@ -2,7 +2,6 @@ import "dotenv/config";
 import express, { type Express, type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
 import { registerRoutes } from "./routes";
-import { serveStatic } from "./static";
 
 declare module "http" {
   interface IncomingMessage {
@@ -36,22 +35,21 @@ export function createApp(app: Express = express()): { app: Express; ready: Prom
   app.use((req, res, next) => {
     const start = Date.now();
     const path = req.path;
-    let capturedJsonResponse: Record<string, any> | undefined;
-    const originalResJson = res.json;
-    res.json = function (bodyJson, ...args) {
-      capturedJsonResponse = bodyJson;
-      return originalResJson.apply(res, [bodyJson, ...args]);
-    };
 
     res.on("finish", () => {
       if (path.startsWith("/api")) {
-        let logLine = `${req.method} ${path} ${res.statusCode} in ${Date.now() - start}ms`;
-        if (capturedJsonResponse) logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-        log(logLine);
+        log(`${req.method} ${path} ${res.statusCode} in ${Date.now() - start}ms`);
       }
     });
 
     next();
+  });
+
+  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
+    const status = err.status || err.statusCode || 500;
+    console.error("Internal Server Error:", err);
+    if (res.headersSent) return next(err);
+    return res.status(status).json({ message: "Internal Server Error" });
   });
 
   let ready!: Promise<void>;
@@ -60,24 +58,16 @@ export function createApp(app: Express = express()): { app: Express; ready: Prom
   });
 
   ready = (async () => {
-    try {
-      await registerRoutes(httpServer, app);
-    } catch (err) {
-      console.warn(
-        "Could not register API routes:",
-        err instanceof Error ? err.stack || err.message : String(err),
-      );
+    await registerRoutes(httpServer, app);
+
+    if (process.env.VERCEL) {
+      // Vercel serves files in public/ through its CDN; Express static serving
+      // is not supported by its Express runtime adapter.
+      return;
     }
 
-    app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
-      const status = err.status || err.statusCode || 500;
-      const message = err.message || "Internal Server Error";
-      console.error("Internal Server Error:", err);
-      if (res.headersSent) return next(err);
-      return res.status(status).json({ message });
-    });
-
     if (process.env.NODE_ENV === "production") {
+      const { serveStatic } = await import("./static");
       serveStatic(app);
     } else {
       const { setupVite } = await import("./vite");

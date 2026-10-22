@@ -2,9 +2,8 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
-import { z } from "zod";
 import { setupAuth } from "./auth";
-import { insertApartmentSchema, type User } from "@shared/schema";
+import type { User } from "@shared/schema";
 
 export async function registerRoutes(
   httpServer: Server,
@@ -125,54 +124,6 @@ export async function registerRoutes(
     const payment = await storage.createPayment({ ...parsed.data, userId: user.id });
     res.status(201).json(payment);
   });
-
-  // Seed Data
-  if (process.env.NODE_ENV !== 'production') {
-    const existingUsers = await storage.getUserByUsername("admin");
-    if (!existingUsers) {
-      await storage.createUser({
-        username: "admin",
-        password: "password123", // TODO: Hash this in real implementation (Auth setup handles hashing usually, but for seed we cheat or use helper)
-        role: "admin",
-        name: "Giovanni Paul Sodipo",
-        email: "admin@lumiere.com",
-        phone: "1234567890"
-      });
-      await storage.createUser({
-        username: "user",
-        password: "password123",
-        role: "customer",
-        name: "Jane Doe",
-        email: "jane@example.com",
-        phone: "0987654321"
-      });
-      
-      // Seed Apartments
-      await storage.createApartment({
-        title: "Luxury Penthouse Suite",
-        description: "Experience the height of luxury in our top-floor penthouse with panoramic city views.",
-        price: 500000, // $5000.00
-        location: "Downtown Metropolis",
-        bedrooms: 3,
-        bathrooms: 2,
-        amenities: ["Pool", "Gym", "Concierge", "WiFi"],
-        images: ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?ixlib=rb-4.0.3&auto=format&fit=crop&w=2340&q=80"],
-        status: "available"
-      });
-      
-       await storage.createApartment({
-        title: "Cozy Studio in Arts District",
-        description: "Perfect for the solo traveler or couple. Close to all the best galleries.",
-        price: 150000, // $1500.00
-        location: "Arts District",
-        bedrooms: 1,
-        bathrooms: 1,
-        amenities: ["WiFi", "Kitchenette"],
-        images: ["https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?ixlib=rb-4.0.3&auto=format&fit=crop&w=2340&q=80"],
-        status: "available"
-      });
-    }
-  }
 
   return httpServer;
 }

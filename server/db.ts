@@ -4,15 +4,32 @@ import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
-let pool: pg.Pool | null = null;
-let db: any = null;
+const connectionString = process.env.DATABASE_URL;
 
-if (process.env.DATABASE_URL) {
-  pool = new Pool({ connectionString: process.env.DATABASE_URL });
-  db = drizzle(pool, { schema });
-  console.log("✅ Database connected");
-} else {
-  console.warn("⚠️  DATABASE_URL not set - API routes may not work");
+if (!connectionString) {
+  throw new Error("DATABASE_URL is required to connect to the Supabase database");
 }
+
+const configuredPoolSize = Number.parseInt(process.env.PG_POOL_MAX ?? "1", 10);
+const poolMax = Number.isFinite(configuredPoolSize) && configuredPoolSize > 0
+  ? configuredPoolSize
+  : 1;
+
+// One client per warm serverless instance; Supabase's transaction pooler
+// shares those clients across the database's backend connections.
+const pool = new Pool({
+  connectionString,
+  max: poolMax,
+  idleTimeoutMillis: 10_000,
+  connectionTimeoutMillis: 10_000,
+  ssl: { rejectUnauthorized: false },
+});
+
+pool.on("error", (error) => {
+  // Never log connection strings or other environment values.
+  console.error("Unexpected idle database client error:", error.code ?? error.name);
+});
+
+const db = drizzle(pool, { schema });
 
 export { pool, db };
