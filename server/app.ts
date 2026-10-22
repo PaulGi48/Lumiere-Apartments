@@ -21,8 +21,7 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
-export function createApp(): { app: Express; ready: Promise<void> } {
-  const app = express();
+export function createApp(app: Express = express()): { app: Express; ready: Promise<void> } {
   const httpServer = createServer(app);
 
   app.use(
