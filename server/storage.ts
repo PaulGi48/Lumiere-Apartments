@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import {
   users, apartments, bookings, maintenanceRequests, payments,
   type User, type InsertUser, type Apartment, type InsertApartment,
@@ -15,6 +15,9 @@ export interface IStorage {
   // Users
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByAuthId(authUserId: string): Promise<User | undefined>;
+  getUsersByEmail(email: string): Promise<User[]>;
+  linkUserToAuth(id: number, authUserId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
 
   // Apartments
@@ -57,6 +60,23 @@ export class DatabaseStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async getUserByAuthId(authUserId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.authUserId, authUserId));
+    return user;
+  }
+
+  async getUsersByEmail(email: string): Promise<User[]> {
+    return await db.select().from(users).where(sql`lower(${users.email}) = lower(${email})`).limit(2);
+  }
+
+  async linkUserToAuth(id: number, authUserId: string): Promise<User | undefined> {
+    const [user] = await db.update(users)
+      .set({ authUserId })
+      .where(eq(users.id, id))
+      .returning();
     return user;
   }
 

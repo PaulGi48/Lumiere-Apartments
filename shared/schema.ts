@@ -1,12 +1,13 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, uuid } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
+  authUserId: uuid("auth_user_id").unique(),
   username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  password: text("password"),
   role: text("role", { enum: ["customer", "admin", "manager", "support"] }).default("customer").notNull(),
   name: text("name").notNull(),
   email: text("email").notNull(),
@@ -130,7 +131,7 @@ export const insertPaymentSchema = createInsertSchema(payments).omit({ id: true,
 
 // Types
 export type User = typeof users.$inferSelect;
-export type PublicUser = Omit<User, "password">;
+export type PublicUser = Omit<User, "password" | "authUserId">;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Apartment = typeof apartments.$inferSelect;
 export type InsertApartment = z.infer<typeof insertApartmentSchema>;

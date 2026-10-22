@@ -19,32 +19,16 @@ export const errorSchemas = {
 
 export const api = {
   auth: {
-    login: {
+    session: {
       method: 'POST' as const,
-      path: '/api/login',
-      input: z.object({
-        username: z.string(),
-        password: z.string(),
-      }),
-      responses: {
-        200: z.custom<PublicUser>(),
-        401: errorSchemas.unauthorized,
-      },
+      path: '/api/auth/session',
+      responses: { 200: z.custom<PublicUser>() },
     },
     logout: {
       method: 'POST' as const,
       path: '/api/logout',
       responses: {
         200: z.void(),
-      },
-    },
-    register: {
-      method: 'POST' as const,
-      path: '/api/register',
-      input: insertUserSchema,
-      responses: {
-        201: z.custom<PublicUser>(),
-        400: errorSchemas.validation,
       },
     },
     me: {
