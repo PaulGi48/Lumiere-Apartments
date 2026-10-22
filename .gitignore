@@ -1,4 +1,36 @@
-node_modules
+# Dependencies
+/node_modules/
+
+# Local environment variables and secrets
 .env
 .env.*
 !.env.example
+
+# Generated application output
+/dist/
+/public/
+/coverage/
+
+# Local platform and agent tooling
+/.vercel/
+/.agents/
+/skills-lock.json
+
+# Build and tool caches
+.turbo/
+.vite/
+*.tsbuildinfo
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Local operating system and editor files
+.DS_Store
+Thumbs.db
+/.idea/
+/.vscode/
+*.swp
+*.swo
