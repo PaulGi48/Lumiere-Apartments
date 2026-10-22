@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
-import type { InsertMaintenanceSchema } from "@shared/schema";
 import { z } from "zod";
 
 type InsertMaintenance = z.infer<typeof api.maintenance.create.input>;

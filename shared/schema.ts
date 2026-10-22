@@ -119,7 +119,12 @@ export const bookingsRelations = relations(bookings, ({ one, many }) => ({
 // Schemas
 export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export const insertApartmentSchema = createInsertSchema(apartments).omit({ id: true, createdAt: true });
-export const insertBookingSchema = createInsertSchema(bookings).omit({ id: true, createdAt: true, paymentStatus: true, status: true });
+export const insertBookingSchema = createInsertSchema(bookings)
+  .omit({ id: true, createdAt: true, paymentStatus: true, status: true })
+  .extend({
+    startDate: z.coerce.date(),
+    endDate: z.coerce.date(),
+  });
 export const insertMaintenanceSchema = createInsertSchema(maintenanceRequests).omit({ id: true, createdAt: true, status: true });
 export const insertPaymentSchema = createInsertSchema(payments).omit({ id: true, createdAt: true });
 

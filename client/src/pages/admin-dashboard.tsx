@@ -15,7 +15,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertApartmentSchema } from "@shared/schema";
+import { insertApartmentSchema, type InsertApartment } from "@shared/schema";
 import { Loader2, Plus, Check, X } from "lucide-react";
 
 import { useCurrency, formatPrice } from "@/hooks/use-currency";
@@ -29,7 +29,7 @@ export default function AdminDashboard() {
   const createApartment = useCreateApartment();
   const { currency, rate } = useCurrency();
 
-  const apartmentForm = useForm({
+  const apartmentForm = useForm<InsertApartment>({
     resolver: zodResolver(insertApartmentSchema),
     defaultValues: {
       title: "",

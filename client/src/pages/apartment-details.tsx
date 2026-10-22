@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, MapPin, BedDouble, Bath, Wifi, Car, Utensils, Tv, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
+import type { DateRange } from "react-day-picker";
 import { addDays, differenceInDays, format } from "date-fns";
 
 import { useCurrency, formatPrice } from "@/hooks/use-currency";
@@ -25,7 +26,7 @@ export default function ApartmentDetails() {
   const { currency, rate } = useCurrency();
   
   // Booking State
-  const [dateRange, setDateRange] = useState<{ from: Date; to?: Date } | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const createBooking = useCreateBooking();
 
@@ -58,8 +59,8 @@ export default function ApartmentDetails() {
     createBooking.mutate({
       apartmentId,
       userId: user.id,
-      startDate: dateRange.from.toISOString(),
-      endDate: dateRange.to.toISOString(),
+      startDate: dateRange.from,
+      endDate: dateRange.to,
       totalPrice,
     }, {
       onSuccess: () => {
