@@ -1,11 +1,11 @@
 import { createContext, ReactNode, useContext } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { insertUserSchema, type User, type InsertUser } from "@shared/schema";
+import { type PublicUser, type InsertUser } from "@shared/schema";
 import { api } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 
 type AuthContextType = {
-  user: User | null;
+  user: PublicUser | null;
   isLoading: boolean;
   error: Error | null;
   loginMutation: ReturnType<typeof useLoginMutation>;
@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     data: user,
     error,
     isLoading,
-  } = useQuery<User | null>({
+  } = useQuery<PublicUser | null>({
     queryKey: [api.auth.me.path],
     queryFn: async () => {
       const res = await fetch(api.auth.me.path);

@@ -23,8 +23,8 @@ import { useCurrency, formatPrice } from "@/hooks/use-currency";
 export default function AdminDashboard() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
-  const { data: bookings } = useBookings();
-  const { data: apartments } = useApartments();
+  const { data: bookings, isLoading: bookingsLoading, isError: bookingsError } = useBookings();
+  const { data: apartments, isLoading: apartmentsLoading, isError: apartmentsError } = useApartments();
   const updateBooking = useUpdateBookingStatus();
   const createApartment = useCreateApartment();
   const { currency, rate } = useCurrency();
@@ -49,15 +49,31 @@ export default function AdminDashboard() {
     return <div className="p-8">Unauthorized Access</div>;
   }
 
-  // Mock Analytics Data
-  const revenueData = [
-    { name: 'Jan', revenue: 4000 },
-    { name: 'Feb', revenue: 3000 },
-    { name: 'Mar', revenue: 2000 },
-    { name: 'Apr', revenue: 2780 },
-    { name: 'May', revenue: 1890 },
-    { name: 'Jun', revenue: 2390 },
-  ];
+  const bookingList = bookings ?? [];
+  const apartmentList = apartments ?? [];
+  const activeBookingCount = bookingList.filter((booking) =>
+    ["pending", "confirmed", "checked_in"].includes(booking.status),
+  ).length;
+  const confirmedBookingValue = bookingList
+    .filter((booking) => ["confirmed", "checked_in", "checked_out"].includes(booking.status))
+    .reduce((total, booking) => total + booking.totalPrice, 0);
+  const availableApartmentCount = apartmentList.filter((apartment) => apartment.status === "available").length;
+  const currentMonth = new Date();
+  const bookingActivity = Array.from({ length: 6 }, (_, index) => {
+    const month = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - (5 - index), 1);
+    return {
+      name: month.toLocaleDateString(undefined, { month: "short" }),
+      monthKey: `${month.getFullYear()}-${month.getMonth()}`,
+      count: 0,
+    };
+  });
+  for (const booking of bookingList) {
+    const createdAt = new Date(booking.createdAt ?? booking.startDate);
+    if (Number.isNaN(createdAt.getTime())) continue;
+    const monthKey = `${createdAt.getFullYear()}-${createdAt.getMonth()}`;
+    const month = bookingActivity.find((entry) => entry.monthKey === monthKey);
+    if (month) month.count += 1;
+  }
 
   return (
     <Layout>
@@ -75,11 +91,11 @@ export default function AdminDashboard() {
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Confirmed booking value</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{formatPrice(4523189, currency, rate)}</div>
-                    <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+                    <div className="text-2xl font-bold">{bookingsLoading ? "—" : formatPrice(confirmedBookingValue, currency, rate)}</div>
+                    <p className="text-xs text-muted-foreground">Confirmed and completed bookings</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -87,8 +103,8 @@ export default function AdminDashboard() {
                     <CardTitle className="text-sm font-medium text-muted-foreground">Active Bookings</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{bookings?.filter(b => b.status === 'confirmed').length || 0}</div>
-                    <p className="text-xs text-muted-foreground">+2 from last hour</p>
+                    <div className="text-2xl font-bold">{bookingsLoading ? "—" : activeBookingCount}</div>
+                    <p className="text-xs text-muted-foreground">Pending, confirmed, or checked in</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -96,26 +112,33 @@ export default function AdminDashboard() {
                     <CardTitle className="text-sm font-medium text-muted-foreground">Properties</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{apartments?.length || 0}</div>
-                    <p className="text-xs text-muted-foreground">4 available now</p>
+                    <div className="text-2xl font-bold">{apartmentsLoading ? "—" : apartmentList.length}</div>
+                    <p className="text-xs text-muted-foreground">{apartmentsLoading ? "Loading availability" : `${availableApartmentCount} available`}</p>
                   </CardContent>
                 </Card>
              </div>
 
              <Card>
                <CardHeader>
-                 <CardTitle>Revenue Overview</CardTitle>
+                 <CardTitle>Booking activity</CardTitle>
+                 <CardDescription>Bookings created over the last six months</CardDescription>
                </CardHeader>
                <CardContent className="h-[300px]">
-                 <ResponsiveContainer width="100%" height="100%">
-                   <BarChart data={revenueData}>
-                     <CartesianGrid strokeDasharray="3 3" />
-                     <XAxis dataKey="name" />
-                     <YAxis />
-                     <Tooltip />
-                     <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                   </BarChart>
-                 </ResponsiveContainer>
+                 {bookingsLoading ? (
+                   <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading booking activity…</div>
+                 ) : bookingsError ? (
+                   <div className="flex h-full items-center justify-center text-sm text-destructive">Could not load booking activity.</div>
+                 ) : (
+                   <ResponsiveContainer width="100%" height="100%">
+                     <BarChart data={bookingActivity}>
+                       <CartesianGrid strokeDasharray="3 3" />
+                       <XAxis dataKey="name" />
+                       <YAxis allowDecimals={false} />
+                       <Tooltip formatter={(value) => [value, "Bookings"]} />
+                       <Bar dataKey="count" name="Bookings" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                     </BarChart>
+                   </ResponsiveContainer>
+                 )}
                </CardContent>
              </Card>
           </TabsContent>
@@ -230,10 +253,12 @@ export default function AdminDashboard() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <Button variant="ghost" size="sm">Edit</Button>
+                        <span className="text-xs text-muted-foreground">—</span>
                       </TableCell>
                     </TableRow>
                   ))}
+                  {apartmentsError && <TableRow><TableCell colSpan={5} className="py-8 text-center text-destructive">Could not load apartments.</TableCell></TableRow>}
+                  {!apartmentsLoading && !apartmentsError && apartmentList.length === 0 && <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">No apartments have been added yet.</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </Card>
@@ -283,6 +308,8 @@ export default function AdminDashboard() {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {bookingsError && <TableRow><TableCell colSpan={5} className="py-8 text-center text-destructive">Could not load bookings.</TableCell></TableRow>}
+                  {!bookingsLoading && !bookingsError && bookingList.length === 0 && <TableRow><TableCell colSpan={5} className="py-8 text-center text-muted-foreground">No bookings yet.</TableCell></TableRow>}
                 </TableBody>
               </Table>
             </Card>

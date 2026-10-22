@@ -16,24 +16,45 @@ async function hashPassword(password: string) {
 }
 
 async function comparePasswords(supplied: string, stored: string) {
-  // TODO: Fix this for seed data which might not be hashed properly in my quick seed
-  // If stored password doesn't have a dot, it's a plain text seed password (FOR DEV ONLY)
+  // Only accept scrypt hashes; never fall back to plaintext password comparison.
   if (!stored.includes(".")) {
-      return supplied === stored;
+    return false;
   }
   
   const [hashed, salt] = stored.split(".");
   const hashedBuf = Buffer.from(hashed, "hex");
   const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+  if (hashedBuf.length !== suppliedBuf.length) return false;
   return timingSafeEqual(hashedBuf, suppliedBuf);
 }
 
+function toPublicUser(user: User) {
+  const { password: _password, ...publicUser } = user;
+  return publicUser;
+}
+
 export function setupAuth(app: Express) {
+  const configuredSessionSecret = process.env.SESSION_SECRET;
+  const hasStrongSessionSecret = Boolean(
+    configuredSessionSecret && Buffer.byteLength(configuredSessionSecret, "utf8") >= 32,
+  );
+  if (process.env.NODE_ENV === "production" && !hasStrongSessionSecret) {
+    throw new Error("SESSION_SECRET must be configured with at least 32 characters");
+  }
+  const sessionSecret = hasStrongSessionSecret
+    ? configuredSessionSecret!
+    : randomBytes(32).toString("hex");
+
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "lumiere_secret_key",
+    secret: sessionSecret,
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,
+    cookie: {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+    },
   };
 
   if (app.get("env") === "production") {
@@ -81,7 +102,7 @@ export function setupAuth(app: Express) {
 
       req.login(user, (err) => {
         if (err) return next(err);
-        res.status(201).json(user);
+        res.status(201).json(toPublicUser(user));
       });
     } catch (err) {
       next(err);
@@ -89,7 +110,7 @@ export function setupAuth(app: Express) {
   });
 
   app.post("/api/login", passport.authenticate("local"), (req, res) => {
-    res.status(200).json(req.user);
+    res.status(200).json(toPublicUser(req.user as User));
   });
 
   app.post("/api/logout", (req, res, next) => {
@@ -101,6 +122,6 @@ export function setupAuth(app: Express) {
 
   app.get("/api/user", (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    res.json(req.user);
+    res.json(toPublicUser(req.user as User));
   });
 }

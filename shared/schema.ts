@@ -130,6 +130,7 @@ export const insertPaymentSchema = createInsertSchema(payments).omit({ id: true,
 
 // Types
 export type User = typeof users.$inferSelect;
+export type PublicUser = Omit<User, "password">;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Apartment = typeof apartments.$inferSelect;
 export type InsertApartment = z.infer<typeof insertApartmentSchema>;

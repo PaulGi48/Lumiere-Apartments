@@ -112,17 +112,8 @@ export async function registerRoutes(
   app.post(api.payments.process.path, async (req, res) => {
     const user = req.user as User | undefined;
     if (!req.isAuthenticated() || !user) return res.sendStatus(401);
-    const parsed = api.payments.process.input.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json(parsed.error);
-    
-    // TODO_PAYMENT_PROVIDER: Integrate Stripe/Paystack SDK here
-    // const provider = parsed.data.provider;
-    // const paymentIntent = await stripe.paymentIntents.create(...) 
-
-    // Mock success for now
-    // @ts-ignore
-    const payment = await storage.createPayment({ ...parsed.data, userId: user.id });
-    res.status(201).json(payment);
+    // Never mark a payment successful until a provider has verified it.
+    res.status(503).json({ message: "Payments are not available yet" });
   });
 
   return httpServer;

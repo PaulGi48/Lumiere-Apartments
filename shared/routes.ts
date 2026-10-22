@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertUserSchema, insertApartmentSchema, insertBookingSchema, insertMaintenanceSchema, insertPaymentSchema, users, apartments, bookings, maintenanceRequests, payments } from './schema';
+import { insertUserSchema, insertApartmentSchema, insertBookingSchema, insertMaintenanceSchema, insertPaymentSchema, users, apartments, bookings, maintenanceRequests, payments, type PublicUser } from './schema';
 
 export const errorSchemas = {
   validation: z.object({
@@ -27,7 +27,7 @@ export const api = {
         password: z.string(),
       }),
       responses: {
-        200: z.custom<typeof users.$inferSelect>(),
+        200: z.custom<PublicUser>(),
         401: errorSchemas.unauthorized,
       },
     },
@@ -43,7 +43,7 @@ export const api = {
       path: '/api/register',
       input: insertUserSchema,
       responses: {
-        201: z.custom<typeof users.$inferSelect>(),
+        201: z.custom<PublicUser>(),
         400: errorSchemas.validation,
       },
     },
@@ -51,7 +51,7 @@ export const api = {
       method: 'GET' as const,
       path: '/api/user',
       responses: {
-        200: z.custom<typeof users.$inferSelect>(),
+        200: z.custom<PublicUser>(),
         401: errorSchemas.unauthorized,
       },
     },
