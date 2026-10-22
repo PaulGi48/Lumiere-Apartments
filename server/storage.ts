@@ -70,7 +70,7 @@ export class DatabaseStorage implements IStorage {
     let query = db.select().from(apartments);
     // Note: Simple filtering for now, can be expanded
     const results = await query;
-    return results.filter(apt => {
+    return results.filter((apt: Apartment) => {
       if (filters?.minPrice && apt.price < filters.minPrice) return false;
       if (filters?.maxPrice && apt.price > filters.maxPrice) return false;
       if (filters?.bedrooms && apt.bedrooms !== filters.bedrooms) return false;
