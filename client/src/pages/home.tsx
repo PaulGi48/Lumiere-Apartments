@@ -7,15 +7,17 @@ import { Search, Loader2, ChevronLeft, ChevronRight, Clock } from "lucide-react"
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useCurrency, formatPrice } from "@/hooks/use-currency";
 
 export default function HomePage() {
   const [minPrice, setMinPrice] = useState<string>("");
   const [maxPrice, setMaxPrice] = useState<string>("");
   const [activeIndex, setActiveIndex] = useState(0);
+  const { currency, rate } = useCurrency();
   
   const { data: apartments, isLoading } = useApartments({
-    minPrice: minPrice ? parseInt(minPrice) * 100 : undefined, // Convert to cents
-    maxPrice: maxPrice ? parseInt(maxPrice) * 100 : undefined,
+    minPrice: minPrice ? Math.round(Number(minPrice) * 100 / rate) : undefined,
+    maxPrice: maxPrice ? Math.round(Number(maxPrice) * 100 / rate) : undefined,
   });
 
   // Auto-rotate the "clock"
@@ -67,20 +69,20 @@ export default function HomePage() {
             className="bg-white p-4 rounded-xl shadow-2xl max-w-3xl mx-auto flex flex-col md:flex-row gap-4 mt-8"
           >
             <div className="flex-1">
-              <label className="text-xs font-semibold text-muted-foreground uppercase mb-1 block text-left pl-1">Min Price</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase mb-1 block text-left pl-1">Min Price ({currency})</label>
               <Input 
                 type="number" 
-                placeholder="$100" 
+                placeholder={formatPrice(10000, currency, rate)} 
                 className="border-0 bg-secondary/30 h-10"
                 value={minPrice}
                 onChange={(e) => setMinPrice(e.target.value)}
               />
             </div>
             <div className="flex-1">
-              <label className="text-xs font-semibold text-muted-foreground uppercase mb-1 block text-left pl-1">Max Price</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase mb-1 block text-left pl-1">Max Price ({currency})</label>
               <Input 
                 type="number" 
-                placeholder="$5000" 
+                placeholder={formatPrice(500000, currency, rate)} 
                 className="border-0 bg-secondary/30 h-10"
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(e.target.value)}

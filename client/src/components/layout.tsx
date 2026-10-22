@@ -192,6 +192,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
             className="md:hidden border-b bg-background overflow-hidden"
           >
             <div className="p-4 flex flex-col gap-2">
+              <div className="flex items-center justify-between px-4 py-2">
+                <span className="text-sm text-muted-foreground">Display currency</span>
+                <CurrencySwitcher />
+              </div>
               <NavLink href="/">Apartments</NavLink>
               {user && <NavLink href="/profile">My Bookings</NavLink>}
               {user?.role === 'admin' && <NavLink href="/admin">Admin Dashboard</NavLink>}
