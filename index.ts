@@ -1,7 +1,7 @@
 import express from "express";
-import { createApp } from "./server/app";
+import app from "./server/index";
 
-const app = express();
-createApp(app);
+// Keep a direct Express import here so Vercel detects this root shim.
+void express;
 
 export default app;
