@@ -60,13 +60,7 @@ export function createApp(app: Express = express()): { app: Express; ready: Prom
   ready = (async () => {
     await registerRoutes(httpServer, app);
 
-    if (process.env.VERCEL) {
-      // Vercel serves files in public/ through its CDN; Express static serving
-      // is not supported by its Express runtime adapter.
-      return;
-    }
-
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.VERCEL || process.env.NODE_ENV === "production") {
       const { serveStatic } = await import("./static.js");
       serveStatic(app);
     } else {
