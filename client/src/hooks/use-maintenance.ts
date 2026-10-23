@@ -9,7 +9,7 @@ export function useMaintenanceRequests() {
     queryKey: [api.maintenance.list.path],
     queryFn: async () => {
       const res = await fetch(api.maintenance.list.path, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch maintenance requests");
+      if (!res.ok) throw new Error(`${res.status}: Failed to fetch maintenance requests`);
       return api.maintenance.list.responses[200].parse(await res.json());
     },
   });

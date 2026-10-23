@@ -34,7 +34,7 @@ export function useApartments(filters?: { minPrice?: number; maxPrice?: number; 
         });
       }
       const res = await fetch(url.toString(), { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch apartments");
+      if (!res.ok) throw new Error(`${res.status}: Failed to fetch apartments`);
       return api.apartments.list.responses[200].parse(await res.json());
     },
   });
@@ -46,7 +46,7 @@ export function useApartment(id: number) {
     queryFn: async () => {
       const url = buildUrl(api.apartments.get.path, { id });
       const res = await fetch(url, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch apartment");
+      if (!res.ok) throw new Error(`${res.status}: Failed to fetch apartment`);
       return api.apartments.get.responses[200].parse(await res.json());
     },
     enabled: !!id,

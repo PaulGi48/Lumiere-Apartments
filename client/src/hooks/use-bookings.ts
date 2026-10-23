@@ -7,7 +7,7 @@ export function useBookings() {
     queryKey: [api.bookings.list.path],
     queryFn: async () => {
       const res = await fetch(api.bookings.list.path, { credentials: "include" });
-      if (!res.ok) throw new Error("Failed to fetch bookings");
+      if (!res.ok) throw new Error(`${res.status}: Failed to fetch bookings`);
       return api.bookings.list.responses[200].parse(await res.json());
     },
   });
