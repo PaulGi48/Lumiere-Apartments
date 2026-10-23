@@ -1,7 +1,7 @@
 import { Layout } from "@/components/layout";
 import { useAuth } from "@/hooks/use-auth";
 import { useBookings, useUpdateBookingStatus } from "@/hooks/use-bookings";
-import { useApartments, useCreateApartment } from "@/hooks/use-apartments";
+import { useApartments, useCreateApartment, useUpdateApartment, uploadApartmentImage } from "@/hooks/use-apartments";
 import { useLocation } from "wouter";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,13 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertApartmentSchema, type InsertApartment } from "@shared/schema";
-import { Loader2, Plus, Check, X } from "lucide-react";
+import { insertApartmentSchema, type Apartment, type InsertApartment } from "@shared/schema";
+import { Loader2, Plus, Check, X, Pencil, Upload, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 import { useCurrency, formatPrice } from "@/hooks/use-currency";
 
@@ -27,6 +29,11 @@ export default function AdminDashboard() {
   const { data: apartments, isLoading: apartmentsLoading, isError: apartmentsError } = useApartments();
   const updateBooking = useUpdateBookingStatus();
   const createApartment = useCreateApartment();
+  const updateApartment = useUpdateApartment();
+  const { toast } = useToast();
+  const [editingApartment, setEditingApartment] = useState<Apartment | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const { currency, rate } = useCurrency();
 
   const apartmentForm = useForm<InsertApartment>({
@@ -43,6 +50,55 @@ export default function AdminDashboard() {
       images: ["https://images.unsplash.com/photo-1522708323590-d24dbb6b0267"]
     }
   });
+
+  const imageUrls = (apartmentForm.watch("images") ?? []) as string[];
+
+  const addImageUrl = () => {
+    const imageUrl = window.prompt("Paste an image URL");
+    if (!imageUrl?.trim()) return;
+    apartmentForm.setValue("images", [...imageUrls, imageUrl.trim()], { shouldDirty: true });
+  };
+
+  const removeImage = (index: number) => {
+    apartmentForm.setValue("images", imageUrls.filter((_, imageIndex) => imageIndex !== index), { shouldDirty: true });
+  };
+
+  const handleImageUpload = async (file: File | undefined) => {
+    if (!file) return;
+    setImageUploading(true);
+    try {
+      const imageUrl = await uploadApartmentImage(file);
+      apartmentForm.setValue("images", [...(apartmentForm.getValues("images") ?? []), imageUrl], { shouldDirty: true });
+    } catch (error) {
+      toast({
+        title: "Image upload failed",
+        description: error instanceof Error ? error.message : "Could not upload this image.",
+        variant: "destructive",
+      });
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
+  const startEditing = (apartment: Apartment) => {
+    setEditingApartment(apartment);
+    apartmentForm.reset({
+      title: apartment.title,
+      description: apartment.description,
+      price: apartment.price,
+      location: apartment.location,
+      bedrooms: apartment.bedrooms,
+      bathrooms: apartment.bathrooms,
+      status: apartment.status,
+      amenities: apartment.amenities,
+      images: apartment.images,
+    });
+  };
+
+  const closeEditing = () => {
+    setEditingApartment(null);
+    apartmentForm.reset();
+  };
 
   if (!user || (user.role !== 'admin' && user.role !== 'manager')) {
     // Ideally use a redirect or dedicated protected route wrapper
@@ -145,16 +201,29 @@ export default function AdminDashboard() {
 
           <TabsContent value="apartments">
             <div className="flex justify-end mb-4">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button><Plus className="w-4 h-4 mr-2" /> Add Apartment</Button>
-                </DialogTrigger>
+              <Dialog open={isCreateOpen || Boolean(editingApartment)} onOpenChange={(open) => {
+                if (!open) {
+                  setIsCreateOpen(false);
+                  closeEditing();
+                }
+              }}>
+                <Button onClick={() => {
+                  setEditingApartment(null);
+                  apartmentForm.reset();
+                  setIsCreateOpen(true);
+                }}><Plus className="w-4 h-4 mr-2" /> Add Apartment</Button>
                 <DialogContent className="max-w-2xl">
                   <DialogHeader>
-                    <DialogTitle>Add New Apartment</DialogTitle>
+                    <DialogTitle>{editingApartment ? "Edit Apartment" : "Add New Apartment"}</DialogTitle>
                   </DialogHeader>
                   <Form {...apartmentForm}>
-                    <form onSubmit={apartmentForm.handleSubmit((data) => createApartment.mutate(data))} className="space-y-4">
+                    <form onSubmit={apartmentForm.handleSubmit((data) => {
+                      if (editingApartment) {
+                        updateApartment.mutate({ id: editingApartment.id, ...data }, { onSuccess: closeEditing });
+                      } else {
+                        createApartment.mutate(data, { onSuccess: () => setIsCreateOpen(false) });
+                      }
+                    })} className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <FormField
                           control={apartmentForm.control}
@@ -219,8 +288,63 @@ export default function AdminDashboard() {
                           )}
                         />
                       </div>
-                      <Button type="submit" className="w-full" disabled={createApartment.isPending}>
-                        {createApartment.isPending ? <Loader2 className="animate-spin" /> : "Create Apartment"}
+                      <FormField
+                        control={apartmentForm.control}
+                        name="amenities"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Amenities</FormLabel>
+                            <FormControl>
+                              <Input
+                                value={(field.value ?? []).join(", ")}
+                                onChange={(event) => field.onChange(event.target.value.split(",").map((item) => item.trim()).filter(Boolean))}
+                                placeholder="Wifi, Parking, Pool"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={apartmentForm.control}
+                        name="status"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Status</FormLabel>
+                            <Select value={field.value} onValueChange={field.onChange}>
+                              <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                              <SelectContent>
+                                <SelectItem value="available">Available</SelectItem>
+                                <SelectItem value="booked">Booked</SelectItem>
+                                <SelectItem value="maintenance">Maintenance</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormItem>
+                        )}
+                      />
+                      <div className="space-y-3">
+                        <FormLabel>Property images</FormLabel>
+                        <div className="flex flex-wrap gap-2">
+                          {imageUrls.map((image, index) => (
+                            <div key={`${image}-${index}`} className="relative h-20 w-24 overflow-hidden rounded-md border bg-muted">
+                              <img src={image} alt={`Property image ${index + 1}`} className="h-full w-full object-cover" />
+                              <Button type="button" size="icon" variant="destructive" className="absolute right-1 top-1 h-6 w-6" onClick={() => removeImage(index)} aria-label="Remove image">
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Button type="button" variant="outline" onClick={addImageUrl}>Add image URL</Button>
+                          <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium hover:bg-muted">
+                            <Upload className="h-4 w-4" />
+                            {imageUploading ? "Uploading…" : "Upload image"}
+                            <Input type="file" accept="image/*" className="sr-only" disabled={imageUploading} onChange={(event) => handleImageUpload(event.target.files?.[0])} />
+                          </label>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Images must be 6 MB or smaller. Uploads use the Supabase property-images bucket.</p>
+                      </div>
+                      <Button type="submit" className="w-full" disabled={createApartment.isPending || updateApartment.isPending}>
+                        {(createApartment.isPending || updateApartment.isPending) ? <Loader2 className="animate-spin" /> : editingApartment ? "Save Changes" : "Create Apartment"}
                       </Button>
                     </form>
                   </Form>
@@ -253,7 +377,9 @@ export default function AdminDashboard() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <span className="text-xs text-muted-foreground">—</span>
+                        <Button type="button" variant="outline" size="sm" onClick={() => startEditing(apt)}>
+                          <Pencil className="mr-2 h-3 w-3" /> Edit
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

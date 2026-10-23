@@ -1,6 +1,26 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import type { InsertApartment, Apartment } from "@shared/schema";
+import { supabase } from "@/lib/supabase";
+
+const apartmentImageBucket = "property-images";
+
+export async function uploadApartmentImage(file: File): Promise<string> {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  if (!file.type.startsWith("image/")) throw new Error("Choose an image file.");
+  if (file.size > 6 * 1024 * 1024) throw new Error("Images must be 6 MB or smaller.");
+
+  const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const path = `apartments/${crypto.randomUUID()}.${extension}`;
+  const { error } = await supabase.storage.from(apartmentImageBucket).upload(path, file, {
+    contentType: file.type,
+    cacheControl: "31536000",
+    upsert: false,
+  });
+  if (error) throw new Error(error.message);
+
+  return supabase.storage.from(apartmentImageBucket).getPublicUrl(path).data.publicUrl;
+}
 
 export function useApartments(filters?: { minPrice?: number; maxPrice?: number; bedrooms?: number }) {
   const queryKey = [api.apartments.list.path, filters];
