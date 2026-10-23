@@ -31,7 +31,8 @@ const registerSchema = z.object({
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const [, setLocation] = useLocation();
-  const [emailConfirmationRequired, setEmailConfirmationRequired] = useState(false);
+  const [registrationNotice, setRegistrationNotice] = useState<"confirmation" | "created" | null>(null);
+  const [authTab, setAuthTab] = useState<"login" | "register">("login");
 
   useEffect(() => {
     if (user) {
@@ -85,7 +86,7 @@ export default function AuthPage() {
               <CardDescription>Sign in to manage your bookings or create a customer account.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="login" className="w-full">
+              <Tabs value={authTab} onValueChange={(value) => setAuthTab(value as "login" | "register")} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6">
                   <TabsTrigger value="login">Login</TabsTrigger>
                   <TabsTrigger value="register">Register</TabsTrigger>
@@ -94,6 +95,13 @@ export default function AuthPage() {
                 <TabsContent value="login">
                   <Form {...loginForm}>
                     <form onSubmit={loginForm.handleSubmit((data) => loginMutation.mutate(data))} className="space-y-4">
+                      {registrationNotice ? (
+                        <p role="status" className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
+                          {registrationNotice === "confirmation"
+                            ? "Account created. Check your email to confirm your address, then sign in below."
+                            : "Account created. Sign in below to continue to the booking dashboard."}
+                        </p>
+                      ) : null}
                       {loginMutation.isError && (
                         <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
                           {loginMutation.error instanceof Error ? loginMutation.error.message : "Sign-in failed. Please try again."}
@@ -136,16 +144,16 @@ export default function AuthPage() {
                 <TabsContent value="register">
                   <Form {...registerForm}>
                     <form onSubmit={registerForm.handleSubmit((data) => {
-                      setEmailConfirmationRequired(false);
+                      setRegistrationNotice(null);
                       registerMutation.mutate(data, {
-                        onSuccess: (result) => setEmailConfirmationRequired(result.needsEmailConfirmation),
+                        onSuccess: (result) => {
+                          setRegistrationNotice(result.needsEmailConfirmation ? "confirmation" : "created");
+                          loginForm.setValue("email", data.email);
+                          registerForm.reset();
+                          setAuthTab("login");
+                        },
                       });
                     })} className="space-y-4">
-                      {emailConfirmationRequired && (
-                        <p role="status" className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
-                          Account created. Check your email to confirm your address, then sign in.
-                        </p>
-                      )}
                       {registerMutation.isError && (
                         <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
                           {registerMutation.error instanceof Error

@@ -69,12 +69,16 @@ function useRegisterMutation() {
         email: form.email,
         password: form.password,
         options: {
+          emailRedirectTo: `${window.location.origin}/auth`,
           data: { username: form.username, name: form.name },
         },
       });
       if (error) throw new Error(error.message);
       if (!data.session) return { user: null, needsEmailConfirmation: true };
-      return { user: await createAppSession(data.session.access_token), needsEmailConfirmation: false };
+      // Keep registration separate from login even if Supabase has Confirm
+      // email disabled. This makes the post-registration flow predictable.
+      await supabase.auth.signOut();
+      return { user: null, needsEmailConfirmation: false };
     },
     onSuccess: ({ user }) => queryClient.setQueryData(authQueryKey, user),
   });
