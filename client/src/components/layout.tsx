@@ -117,7 +117,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 className="cursor-pointer text-destructive focus:text-destructive"
-                onClick={() => logoutMutation.mutate()}
+                onClick={() => logoutMutation.mutate({})}
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Sign Out
@@ -205,7 +205,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <Button 
                     variant="destructive" 
                     className="w-full justify-start"
-                    onClick={() => logoutMutation.mutate()}
+                    onClick={() => logoutMutation.mutate({})}
                   >
                     <LogOut className="w-4 h-4 mr-2" />
                     Sign Out

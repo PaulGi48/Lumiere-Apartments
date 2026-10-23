@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { type PublicUser } from "@shared/schema";
 import { api } from "@shared/routes";
@@ -18,6 +18,10 @@ type AuthMutationResult = {
   needsEmailConfirmation: boolean;
 };
 
+type LogoutInput = {
+  reason?: "expired";
+};
+
 type AuthContextType = {
   user: PublicUser | null;
   isLoading: boolean;
@@ -29,6 +33,9 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 const authQueryKey = [api.auth.me.path];
+const SESSION_TIMEOUT_MS = 15 * 60 * 1000;
+const SESSION_WARNING_MS = 2 * 60 * 1000;
+const SESSION_STARTED_AT_KEY = "lumiere.session.startedAt";
 
 async function readErrorMessage(response: Response, fallback: string) {
   const payload = await response.json().catch(() => null) as { message?: unknown } | null;
@@ -56,7 +63,10 @@ function useLoginMutation() {
       if (!data.session) throw new Error("Sign-in did not return a session. Confirm your email, then try again.");
       return { user: await createAppSession(data.session.access_token), needsEmailConfirmation: false };
     },
-    onSuccess: ({ user }) => queryClient.setQueryData(authQueryKey, user),
+    onSuccess: ({ user }) => {
+      sessionStorage.setItem(SESSION_STARTED_AT_KEY, String(Date.now()));
+      queryClient.setQueryData(authQueryKey, user);
+    },
   });
 }
 
@@ -89,15 +99,21 @@ function useLogoutMutation() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (_input?: LogoutInput) => {
       const { error } = supabase ? await supabase.auth.signOut() : { error: null };
       await fetch(api.auth.logout.path, { method: api.auth.logout.method });
       if (error) throw new Error(error.message);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      sessionStorage.removeItem(SESSION_STARTED_AT_KEY);
       queryClient.setQueryData(authQueryKey, null);
       setLocation("/");
-      toast({ title: "Logged out successfully" });
+      toast({
+        title: variables?.reason === "expired" ? "Session expired" : "Logged out successfully",
+        description: variables?.reason === "expired"
+          ? "For your security, your 15-minute session has ended. Sign in again to continue."
+          : undefined,
+      });
     },
     onError: () => toast({ title: "Logout failed", variant: "destructive" }),
   });
@@ -126,6 +142,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loginMutation = useLoginMutation();
   const registerMutation = useRegisterMutation();
   const logoutMutation = useLogoutMutation();
+
+  useEffect(() => {
+    if (!user) {
+      sessionStorage.removeItem(SESSION_STARTED_AT_KEY);
+      return;
+    }
+
+    const storedStart = Number(sessionStorage.getItem(SESSION_STARTED_AT_KEY));
+    const startedAt = Number.isFinite(storedStart) && storedStart > 0 ? storedStart : Date.now();
+    sessionStorage.setItem(SESSION_STARTED_AT_KEY, String(startedAt));
+
+    const remainingMs = Math.max(0, SESSION_TIMEOUT_MS - (Date.now() - startedAt));
+    const warningTimer = window.setTimeout(() => {
+      toast({
+        title: "Session ending soon",
+        description: "You will be logged out in 2 minutes. Please finish or submit your booking.",
+        variant: "destructive",
+      });
+    }, Math.max(0, remainingMs - SESSION_WARNING_MS));
+    const logoutTimer = window.setTimeout(() => logoutMutation.mutate({ reason: "expired" }), remainingMs);
+
+    return () => {
+      window.clearTimeout(warningTimer);
+      window.clearTimeout(logoutTimer);
+    };
+  }, [user, logoutMutation, toast]);
 
   return (
     <AuthContext.Provider value={{
