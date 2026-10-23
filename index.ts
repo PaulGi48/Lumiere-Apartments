@@ -1,8 +1,5 @@
-import "dotenv/config";
-import express from "express";
 import { createApp } from "./server/app";
 
-const app = express();
-createApp(app);
+const { app } = createApp();
 
 export default app;
