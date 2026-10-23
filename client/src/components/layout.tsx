@@ -28,6 +28,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useCurrency, Currency } from "@/hooks/use-currency";
+import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Select,
   SelectContent,
@@ -91,6 +92,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </Button>
       </form>
       <CurrencySwitcher />
+      <ThemeToggle />
       <div className="h-4 w-px bg-border mx-1" />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -214,6 +216,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <div className="flex items-center justify-between px-4 py-2">
                 <span className="text-sm text-muted-foreground">Display currency</span>
                 <CurrencySwitcher />
+              </div>
+              <div className="flex items-center justify-between px-4 py-2">
+                <span className="text-sm text-muted-foreground">Theme</span>
+                <ThemeToggle />
               </div>
               <form onSubmit={submitSearch} className="flex items-center gap-2 px-4 py-2" aria-label="Search apartments">
                 <Input aria-label="Minimum price" type="number" value={minPrice} onChange={(event) => setMinPrice(event.target.value)} placeholder="Min price" />

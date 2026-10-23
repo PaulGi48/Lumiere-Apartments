@@ -15,6 +15,7 @@ import AdminDashboard from "@/pages/admin-dashboard";
 import SupportDashboard from "@/pages/support-dashboard";
 import TermsPage from "@/pages/terms-page";
 import { AppErrorBoundary } from "@/components/error-boundary";
+import { ThemeProvider } from "@/components/theme-provider";
 
 function Router() {
   return (
@@ -36,16 +37,18 @@ import { PreloadPage } from "@/components/preload-page";
 function App() {
   return (
     <AppErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <AuthProvider>
-          <PreloadPage>
-            <TooltipProvider>
-              <Toaster />
-              <Router />
-            </TooltipProvider>
-          </PreloadPage>
-        </AuthProvider>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <PreloadPage>
+              <TooltipProvider>
+                <Toaster />
+                <Router />
+              </TooltipProvider>
+            </PreloadPage>
+          </AuthProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
     </AppErrorBoundary>
   );
 }
