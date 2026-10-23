@@ -25,7 +25,10 @@ function getDatabaseErrorCode(error: unknown): string | undefined {
 
 function createAuthClient() {
   const url = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const key = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+  const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY
+    || process.env.VITE_SUPABASE_ANON_KEY
+    || process.env.SUPABASE_PUBLISHABLE_KEY
+    || process.env.SUPABASE_ANON_KEY;
   if (!url || !key) return null;
   return createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },

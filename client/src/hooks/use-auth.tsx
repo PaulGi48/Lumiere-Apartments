@@ -4,6 +4,7 @@ import { type PublicUser } from "@shared/schema";
 import { api } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
+import { useLocation } from "wouter";
 
 type RegisterInput = {
   username: string;
@@ -82,6 +83,7 @@ function useRegisterMutation() {
 function useLogoutMutation() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   return useMutation({
     mutationFn: async () => {
       const { error } = supabase ? await supabase.auth.signOut() : { error: null };
@@ -90,6 +92,7 @@ function useLogoutMutation() {
     },
     onSuccess: () => {
       queryClient.setQueryData(authQueryKey, null);
+      setLocation("/");
       toast({ title: "Logged out successfully" });
     },
     onError: () => toast({ title: "Logout failed", variant: "destructive" }),

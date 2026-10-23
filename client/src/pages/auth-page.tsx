@@ -3,7 +3,6 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { insertUserSchema } from "../../../shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,16 +10,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Layout } from "@/components/layout";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  email: z.string().email("Enter a valid email address"),
   password: z.string().min(1, "Password is required"),
 });
 
-const registerSchema = insertUserSchema.extend({
+const registerSchema = z.object({
+  username: z.string().trim().min(3, "Username must be at least 3 characters").max(32).regex(/^[a-zA-Z0-9_.-]+$/, "Use letters, numbers, dots, dashes, or underscores"),
+  name: z.string().trim().min(1, "Full name is required").max(100),
+  email: z.string().email("Enter a valid email address"),
   password: z.string().min(12, "Use at least 12 characters"),
-  confirmPassword: z.string()
+  confirmPassword: z.string(),
 }).refine(data => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -29,6 +31,7 @@ const registerSchema = insertUserSchema.extend({
 export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const [, setLocation] = useLocation();
+  const [emailConfirmationRequired, setEmailConfirmationRequired] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -44,12 +47,12 @@ export default function AuthPage() {
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { username: "", password: "" }
+    defaultValues: { email: "", password: "" }
   });
 
   const registerForm = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { username: "", password: "", confirmPassword: "", name: "", email: "", role: "customer" }
+    defaultValues: { username: "", password: "", confirmPassword: "", name: "", email: "" }
   });
 
   return (
@@ -93,17 +96,17 @@ export default function AuthPage() {
                     <form onSubmit={loginForm.handleSubmit((data) => loginMutation.mutate(data))} className="space-y-4">
                       {loginMutation.isError && (
                         <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                          Sign-in failed. Check your username and password, then try again.
+                          {loginMutation.error instanceof Error ? loginMutation.error.message : "Sign-in failed. Please try again."}
                         </p>
                       )}
                       <FormField
                         control={loginForm.control}
-                        name="username"
+                        name="email"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Username</FormLabel>
+                            <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <Input placeholder="Enter username" {...field} />
+                              <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -132,7 +135,17 @@ export default function AuthPage() {
 
                 <TabsContent value="register">
                   <Form {...registerForm}>
-                    <form onSubmit={registerForm.handleSubmit((data) => registerMutation.mutate(data))} className="space-y-4">
+                    <form onSubmit={registerForm.handleSubmit((data) => {
+                      setEmailConfirmationRequired(false);
+                      registerMutation.mutate(data, {
+                        onSuccess: (result) => setEmailConfirmationRequired(result.needsEmailConfirmation),
+                      });
+                    })} className="space-y-4">
+                      {emailConfirmationRequired && (
+                        <p role="status" className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
+                          Account created. Check your email to confirm your address, then sign in.
+                        </p>
+                      )}
                       {registerMutation.isError && (
                         <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">
                           {registerMutation.error instanceof Error
@@ -147,7 +160,7 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Full Name</FormLabel>
                             <FormControl>
-                              <Input placeholder="John Doe" {...field} />
+                              <Input autoComplete="name" placeholder="John Doe" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -160,7 +173,7 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Email</FormLabel>
                             <FormControl>
-                              <Input type="email" placeholder="john@example.com" {...field} />
+                              <Input type="email" autoComplete="email" placeholder="john@example.com" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -173,7 +186,7 @@ export default function AuthPage() {
                           <FormItem>
                             <FormLabel>Username</FormLabel>
                             <FormControl>
-                              <Input placeholder="Choose a username" {...field} />
+                              <Input autoComplete="username" placeholder="Choose a username" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -187,7 +200,7 @@ export default function AuthPage() {
                             <FormItem>
                               <FormLabel>Password</FormLabel>
                               <FormControl>
-                                <Input type="password" {...field} />
+                                <Input type="password" autoComplete="new-password" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -200,7 +213,7 @@ export default function AuthPage() {
                             <FormItem>
                               <FormLabel>Confirm</FormLabel>
                               <FormControl>
-                                <Input type="password" {...field} />
+                                <Input type="password" autoComplete="new-password" {...field} />
                               </FormControl>
                               <FormMessage />
                             </FormItem>
