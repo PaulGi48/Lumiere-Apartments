@@ -1,4 +1,4 @@
-import { db } from "./db.js";
+import { db, pool } from "./db.js";
 import { eq, sql } from "drizzle-orm";
 import {
   users, apartments, bookings, maintenanceRequests, payments,
@@ -8,8 +8,10 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import connectPgSimple from "connect-pg-simple";
 
 const MemoryStore = createMemoryStore(session);
+const PgStore = connectPgSimple(session);
 
 export interface IStorage {
   // Users
@@ -47,9 +49,16 @@ export class DatabaseStorage implements IStorage {
   sessionStore: session.Store;
 
   constructor() {
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
-    });
+    this.sessionStore = process.env.NODE_ENV === "production"
+      ? new PgStore({
+          pool,
+          tableName: "user_sessions",
+          createTableIfMissing: true,
+          ttl: 7 * 24 * 60 * 60,
+        })
+      : new MemoryStore({
+          checkPeriod: 86400000,
+        });
   }
 
   // Users
