@@ -3,18 +3,21 @@ import { useApartments } from "@/hooks/use-apartments";
 import { ApartmentCard } from "@/components/apartment-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Loader2, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useCurrency, formatPrice } from "@/hooks/use-currency";
+import { useLocation } from "wouter";
 
 export default function HomePage() {
-  const [minPrice, setMinPrice] = useState<string>("");
-  const [maxPrice, setMaxPrice] = useState<string>("");
   const [activeIndex, setActiveIndex] = useState(0);
+  const [location] = useLocation();
   const { currency, rate } = useCurrency();
-  
+  const searchParams = new URLSearchParams(location.split("?")[1] ?? "");
+  const minPrice = searchParams.get("minPrice") ?? "";
+  const maxPrice = searchParams.get("maxPrice") ?? "";
+
   const { data: apartments, isLoading } = useApartments({
     minPrice: minPrice ? Math.round(Number(minPrice) * 100 / rate) : undefined,
     maxPrice: maxPrice ? Math.round(Number(maxPrice) * 100 / rate) : undefined,
@@ -28,6 +31,15 @@ export default function HomePage() {
     }, 5000);
     return () => clearInterval(interval);
   }, [apartments]);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [minPrice, maxPrice]);
+
+  const moveGallery = (direction: -1 | 1) => {
+    if (!apartments?.length) return;
+    setActiveIndex((prev) => (prev + direction + apartments.length) % apartments.length);
+  };
 
   return (
     <Layout>
@@ -61,113 +73,57 @@ export default function HomePage() {
             Discover hand-picked luxury apartments in the world's most desirable locations.
           </motion.p>
           
-          {/* Search Bar */}
+          {/* Apartment gallery replaces the former hero search bar. */}
           <motion.div 
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-            className="bg-white p-4 rounded-xl shadow-2xl max-w-3xl mx-auto flex flex-col md:flex-row gap-4 mt-8"
+            className="relative max-w-2xl mx-auto mt-8"
           >
-            <div className="flex-1">
-              <label className="text-xs font-semibold text-muted-foreground uppercase mb-1 block text-left pl-1">Min Price ({currency})</label>
-              <Input 
-                type="number" 
-                placeholder={formatPrice(10000, currency, rate)} 
-                className="border-0 bg-secondary/30 h-10"
-                value={minPrice}
-                onChange={(e) => setMinPrice(e.target.value)}
-              />
-            </div>
-            <div className="flex-1">
-              <label className="text-xs font-semibold text-muted-foreground uppercase mb-1 block text-left pl-1">Max Price ({currency})</label>
-              <Input 
-                type="number" 
-                placeholder={formatPrice(500000, currency, rate)} 
-                className="border-0 bg-secondary/30 h-10"
-                value={maxPrice}
-                onChange={(e) => setMaxPrice(e.target.value)}
-              />
-            </div>
-            <div className="flex items-end">
-              <Button size="lg" className="w-full md:w-auto px-8 h-10 font-bold">
-                <Search className="w-4 h-4 mr-2" />
-                Search
-              </Button>
-            </div>
+            {isLoading ? (
+              <div className="flex justify-center rounded-2xl bg-white/95 py-20 shadow-2xl">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              </div>
+            ) : apartments && apartments.length > 0 ? (
+              <>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={apartments[activeIndex]?.id}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    onDragEnd={(_, info) => {
+                      if (info.offset.x < -50) moveGallery(1);
+                      if (info.offset.x > 50) moveGallery(-1);
+                    }}
+                    initial={{ opacity: 0, scale: 0.96, x: 80 }}
+                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.96, x: -80 }}
+                    transition={{ duration: 0.4, ease: "circOut" }}
+                    className="cursor-grab active:cursor-grabbing"
+                  >
+                    <ApartmentCard apartment={apartments[activeIndex]} />
+                  </motion.div>
+                </AnimatePresence>
+                <div className="absolute inset-y-1/2 left-0 right-0 flex justify-between px-3">
+                  <Button type="button" variant="outline" size="icon" className="rounded-full shadow-lg" onClick={() => moveGallery(-1)} aria-label="Previous apartment">
+                    <ChevronLeft />
+                  </Button>
+                  <Button type="button" variant="outline" size="icon" className="rounded-full shadow-lg" onClick={() => moveGallery(1)} aria-label="Next apartment">
+                    <ChevronRight />
+                  </Button>
+                </div>
+                <div className="mt-4 flex justify-center gap-2">
+                  {apartments.map((apartment, index) => (
+                    <button key={apartment.id} type="button" onClick={() => setActiveIndex(index)} aria-label={`Show ${apartment.title}`} className={cn("h-2 rounded-full transition-all", index === activeIndex ? "w-8 bg-white" : "w-2 bg-white/50")} />
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="rounded-2xl bg-white/95 px-6 py-16 text-center text-muted-foreground shadow-2xl">
+                No premium apartments match your search.
+              </div>
+            )}
           </motion.div>
-        </div>
-      </section>
-
-      {/* Apartment Clock Tool (Carousel) */}
-      <section className="py-20 bg-muted/20 overflow-hidden">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center gap-3 mb-12">
-            <div className="p-2 bg-primary/10 rounded-full text-primary">
-              <Clock className="w-6 h-6 animate-pulse" />
-            </div>
-            <div>
-              <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground">Apartment Showcase</h2>
-              <p className="text-muted-foreground">Dynamic rotation of our premium listings</p>
-            </div>
-          </div>
-
-          {isLoading ? (
-            <div className="flex justify-center py-20">
-              <Loader2 className="w-10 h-10 animate-spin text-primary" />
-            </div>
-          ) : apartments && apartments.length > 0 ? (
-            <div className="relative max-w-5xl mx-auto h-[500px] flex items-center justify-center">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={apartments[activeIndex].id}
-                  initial={{ opacity: 0, scale: 0.9, x: 100 }}
-                  animate={{ opacity: 1, scale: 1, x: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, x: -100 }}
-                  transition={{ duration: 0.5, ease: "circOut" }}
-                  className="w-full max-w-2xl"
-                >
-                  <ApartmentCard apartment={apartments[activeIndex]} />
-                </motion.div>
-              </AnimatePresence>
-              
-              <div className="absolute left-0 right-0 flex justify-between px-4">
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="rounded-full shadow-lg"
-                  onClick={() => setActiveIndex((prev) => (prev - 1 + apartments.length) % apartments.length)}
-                >
-                  <ChevronLeft />
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="icon" 
-                  className="rounded-full shadow-lg"
-                  onClick={() => setActiveIndex((prev) => (prev + 1) % apartments.length)}
-                >
-                  <ChevronRight />
-                </Button>
-              </div>
-
-              {/* Clock indicators */}
-              <div className="absolute -bottom-10 left-1/2 -translate-x-1/2 flex gap-2">
-                {apartments.map((_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActiveIndex(i)}
-                    className={cn(
-                      "w-2 h-2 rounded-full transition-all duration-300",
-                      i === activeIndex ? "w-8 bg-primary" : "bg-primary/20 hover:bg-primary/40"
-                    )}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className="text-center py-20 text-muted-foreground italic">
-              No premium apartments to display at the moment.
-            </div>
-          )}
         </div>
       </section>
 
