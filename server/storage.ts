@@ -1,4 +1,4 @@
-import { db } from "./db";
+import { db } from "./db.js";
 import { eq, sql } from "drizzle-orm";
 import {
   users, apartments, bookings, maintenanceRequests, payments,

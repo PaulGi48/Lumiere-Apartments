@@ -4,7 +4,7 @@ import session from "express-session";
 import { randomBytes } from "crypto";
 import { createClient, type User as SupabaseUser } from "@supabase/supabase-js";
 import { z } from "zod";
-import { storage } from "./storage";
+import { storage } from "./storage.js";
 import { User } from "@shared/schema";
 
 const profileMetadataSchema = z.object({

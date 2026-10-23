@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express, { type Express, type Request, Response, NextFunction } from "express";
 import { createServer } from "http";
-import { registerRoutes } from "./routes";
+import { registerRoutes } from "./routes.js";
 
 declare module "http" {
   interface IncomingMessage {
@@ -67,10 +67,10 @@ export function createApp(app: Express = express()): { app: Express; ready: Prom
     }
 
     if (process.env.NODE_ENV === "production") {
-      const { serveStatic } = await import("./static");
+      const { serveStatic } = await import("./static.js");
       serveStatic(app);
     } else {
-      const { setupVite } = await import("./vite");
+      const { setupVite } = await import("./vite.js");
       await setupVite(httpServer, app);
     }
   })();

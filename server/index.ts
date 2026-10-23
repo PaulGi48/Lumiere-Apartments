@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { createServer } from "http";
 import express from "express";
-import { createApp, log } from "./app";
+import { createApp, log } from "./app.js";
 
 const app = express();
 const { ready } = createApp(app);
