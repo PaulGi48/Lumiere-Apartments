@@ -35,6 +35,10 @@ export default function HomePage() {
     setActiveIndex(0);
   }, [minPrice, maxPrice]);
 
+  const safeActiveIndex = apartments?.length
+    ? Math.min(activeIndex, apartments.length - 1)
+    : 0;
+
   const moveGallery = (direction: -1 | 1) => {
     if (!apartments?.length) return;
     setActiveIndex((prev) => (prev + direction + apartments.length) % apartments.length);
@@ -87,7 +91,7 @@ export default function HomePage() {
               <>
                 <AnimatePresence mode="wait">
                   <motion.div
-                    key={apartments[activeIndex]?.id}
+                    key={apartments[safeActiveIndex]?.id}
                     drag="x"
                     dragConstraints={{ left: 0, right: 0 }}
                     onDragEnd={(_, info) => {
@@ -100,7 +104,7 @@ export default function HomePage() {
                     transition={{ duration: 0.4, ease: "circOut" }}
                     className="cursor-grab active:cursor-grabbing"
                   >
-                    <ApartmentCard apartment={apartments[activeIndex]} />
+                    <ApartmentCard apartment={apartments[safeActiveIndex]} />
                   </motion.div>
                 </AnimatePresence>
                 <div className="absolute inset-y-1/2 left-0 right-0 flex justify-between px-3">
@@ -113,7 +117,7 @@ export default function HomePage() {
                 </div>
                 <div className="mt-4 flex justify-center gap-2">
                   {apartments.map((apartment, index) => (
-                    <button key={apartment.id} type="button" onClick={() => setActiveIndex(index)} aria-label={`Show ${apartment.title}`} className={cn("h-2 rounded-full transition-all", index === activeIndex ? "w-8 bg-white" : "w-2 bg-white/50")} />
+                    <button key={apartment.id} type="button" onClick={() => setActiveIndex(index)} aria-label={`Show ${apartment.title}`} className={cn("h-2 rounded-full transition-all", index === safeActiveIndex ? "w-8 bg-white" : "w-2 bg-white/50")} />
                   ))}
                 </div>
               </>
