@@ -2,18 +2,17 @@ import { Layout } from "@/components/layout";
 import { useApartments } from "@/hooks/use-apartments";
 import { ApartmentCard } from "@/components/apartment-card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { useCurrency, formatPrice } from "@/hooks/use-currency";
+import { useCurrency } from "@/hooks/use-currency";
 import { useLocation } from "wouter";
 
 export default function HomePage() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [location] = useLocation();
-  const { currency, rate } = useCurrency();
+  const { rate } = useCurrency();
   const searchParams = new URLSearchParams(location.split("?")[1] ?? "");
   const minPrice = searchParams.get("minPrice") ?? "";
   const maxPrice = searchParams.get("maxPrice") ?? "";

@@ -1,6 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
   Building2, 
   User, 
@@ -13,7 +14,8 @@ import {
   UserPlus,
   LogIn,
   Info,
-  FileText
+  FileText,
+  Search
 } from "lucide-react";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,9 +38,19 @@ import {
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { user, logoutMutation } = useAuth();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { currency, setCurrency } = useCurrency();
+  const [minPrice, setMinPrice] = useState(() => new URLSearchParams(window.location.search).get("minPrice") ?? "");
+  const [maxPrice, setMaxPrice] = useState(() => new URLSearchParams(window.location.search).get("maxPrice") ?? "");
+
+  const submitSearch = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const params = new URLSearchParams();
+    if (minPrice) params.set("minPrice", minPrice);
+    if (maxPrice) params.set("maxPrice", maxPrice);
+    setLocation(params.toString() ? `/?${params.toString()}` : "/");
+  };
 
   const CurrencySwitcher = () => (
     <Select value={currency} onValueChange={(val) => setCurrency(val as Currency)}>
@@ -71,6 +83,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const NavMenu = () => (
     <div className="flex items-center gap-2">
+      <form onSubmit={submitSearch} className="hidden lg:flex items-center gap-1" aria-label="Search apartments">
+        <Input aria-label="Minimum price" type="number" value={minPrice} onChange={(event) => setMinPrice(event.target.value)} placeholder="Min" className="h-8 w-16 px-2 text-xs" />
+        <Input aria-label="Maximum price" type="number" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} placeholder="Max" className="h-8 w-16 px-2 text-xs" />
+        <Button type="submit" variant="ghost" size="icon" className="h-8 w-8" aria-label="Search apartments">
+          <Search className="h-4 w-4" />
+        </Button>
+      </form>
       <CurrencySwitcher />
       <div className="h-4 w-px bg-border mx-1" />
       <DropdownMenu>
@@ -131,7 +150,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               About Us
             </DropdownMenuItem>
           </Link>
-          <Link href="#">
+          <Link href="/terms">
             <DropdownMenuItem className="cursor-pointer">
               <FileText className="w-4 h-4 mr-2" />
               Terms & Conditions
@@ -196,6 +215,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <span className="text-sm text-muted-foreground">Display currency</span>
                 <CurrencySwitcher />
               </div>
+              <form onSubmit={submitSearch} className="flex items-center gap-2 px-4 py-2" aria-label="Search apartments">
+                <Input aria-label="Minimum price" type="number" value={minPrice} onChange={(event) => setMinPrice(event.target.value)} placeholder="Min price" />
+                <Input aria-label="Maximum price" type="number" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} placeholder="Max price" />
+                <Button type="submit" size="icon" aria-label="Search apartments"><Search className="h-4 w-4" /></Button>
+              </form>
               <NavLink href="/">Apartments</NavLink>
               {user && <NavLink href="/profile">My Bookings</NavLink>}
               {user?.role === 'admin' && <NavLink href="/admin">Admin Dashboard</NavLink>}
@@ -250,6 +274,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <li><Link href="#" className="hover:text-primary transition-colors">About Us</Link></li>
                 <li><Link href="#" className="hover:text-primary transition-colors">Careers</Link></li>
                 <li><Link href="#" className="hover:text-primary transition-colors">Contact</Link></li>
+                <li><Link href="/terms" className="hover:text-primary transition-colors">Terms & Conditions</Link></li>
               </ul>
             </div>
 

@@ -13,6 +13,7 @@ import ApartmentDetails from "@/pages/apartment-details";
 import ProfilePage from "@/pages/profile";
 import AdminDashboard from "@/pages/admin-dashboard";
 import SupportDashboard from "@/pages/support-dashboard";
+import TermsPage from "@/pages/terms-page";
 
 function Router() {
   return (
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/profile" component={ProfilePage} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/support" component={SupportDashboard} />
+      <Route path="/terms" component={TermsPage} />
       <Route component={NotFound} />
     </Switch>
   );
