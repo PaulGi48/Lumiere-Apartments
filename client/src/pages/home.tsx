@@ -47,7 +47,7 @@ export default function HomePage() {
   return (
     <Layout>
       {/* Hero Section */}
-      <section className="relative h-[600px] flex items-center justify-center overflow-hidden">
+      <section className="relative min-h-[650px] flex items-center justify-center overflow-hidden md:h-[700px]">
         {/* Unsplash luxury interior */}
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-black/40 z-10" />
@@ -81,7 +81,7 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.4, ease: "easeOut" }}
-            className="relative max-w-2xl mx-auto mt-8"
+            className="relative mx-auto mt-8 w-full max-w-3xl px-7 sm:px-10"
           >
             {isLoading ? (
               <div className="flex justify-center rounded-2xl bg-white/95 py-20 shadow-2xl">
@@ -104,14 +104,14 @@ export default function HomePage() {
                     transition={{ duration: 0.4, ease: "circOut" }}
                     className="cursor-grab active:cursor-grabbing"
                   >
-                    <ApartmentCard apartment={apartments[safeActiveIndex]} />
+                    <ApartmentCard apartment={apartments[safeActiveIndex]} variant="gallery" />
                   </motion.div>
                 </AnimatePresence>
-                <div className="absolute inset-y-1/2 left-0 right-0 flex justify-between px-3">
-                  <Button type="button" variant="outline" size="icon" className="rounded-full shadow-lg" onClick={() => moveGallery(-1)} aria-label="Previous apartment">
+                <div className="pointer-events-none absolute inset-y-1/2 left-0 right-0 flex -translate-y-1/2 justify-between">
+                  <Button type="button" variant="outline" size="icon" className="pointer-events-auto rounded-full bg-white/95 shadow-lg" onClick={() => moveGallery(-1)} aria-label="Previous apartment">
                     <ChevronLeft />
                   </Button>
-                  <Button type="button" variant="outline" size="icon" className="rounded-full shadow-lg" onClick={() => moveGallery(1)} aria-label="Next apartment">
+                  <Button type="button" variant="outline" size="icon" className="pointer-events-auto rounded-full bg-white/95 shadow-lg" onClick={() => moveGallery(1)} aria-label="Next apartment">
                     <ChevronRight />
                   </Button>
                 </div>
