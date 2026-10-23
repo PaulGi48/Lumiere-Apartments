@@ -36,6 +36,7 @@ const authQueryKey = [api.auth.me.path];
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000;
 const SESSION_WARNING_MS = 2 * 60 * 1000;
 const SESSION_STARTED_AT_KEY = "lumiere.session.startedAt";
+const PUBLIC_SITE_URL = (import.meta.env.VITE_SITE_URL || "https://lumiere-apartments.vercel.app").replace(/\/+$/, "");
 
 async function readErrorMessage(response: Response, fallback: string) {
   const payload = await response.json().catch(() => null) as { message?: unknown } | null;
@@ -79,7 +80,7 @@ function useRegisterMutation() {
         email: form.email,
         password: form.password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth`,
+          emailRedirectTo: `${PUBLIC_SITE_URL}/`,
           data: { username: form.username, name: form.name },
         },
       });
