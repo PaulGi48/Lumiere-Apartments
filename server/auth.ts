@@ -5,7 +5,7 @@ import { randomBytes } from "crypto";
 import { createClient, type User as SupabaseUser } from "@supabase/supabase-js";
 import { z } from "zod";
 import { storage } from "./storage.js";
-import { User } from "@shared/schema";
+import { User } from "../shared/schema.js";
 
 const profileMetadataSchema = z.object({
   username: z.string().trim().min(3).max(32).regex(/^[a-zA-Z0-9_.-]+$/),

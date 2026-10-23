@@ -5,7 +5,7 @@ import {
   type User, type InsertUser, type Apartment, type InsertApartment,
   type Booking, type InsertBooking, type MaintenanceRequest,
   type Payment, type InsertBooking as InsertBookingType
-} from "@shared/schema";
+} from "../shared/schema.js";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import connectPgSimple from "connect-pg-simple";
