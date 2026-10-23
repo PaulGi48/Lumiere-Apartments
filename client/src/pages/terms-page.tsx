@@ -133,7 +133,7 @@ export default function TermsPage() {
             <h1>Terms &amp; Conditions</h1>
             <p className="lead">Effective date: 23 October 2026</p>
             <p>
-              This page is a general platform terms template for a Nigerian real-estate and accommodation service. It should be reviewed and completed with Lumiere’s legal name, business address, contact details, booking policies, and any state-specific requirements before it is relied on as a final legal document.
+              This page is a general platform terms document for a Nigerian real-estate and accommodation service.
             </p>
 
             {sections.map((section) => (
@@ -145,7 +145,7 @@ export default function TermsPage() {
 
             <hr />
             <p className="text-sm text-muted-foreground">
-              The consumer-protection and data-protection references reflected in this template include the Federal Competition and Consumer Protection Act 2018 and the Nigeria Data Protection Act 2023. This page does not replace professional legal advice.
+              The consumer-protection and data-protection references reflected in this document include the Federal Competition and Consumer Protection Act 2018 and the Nigeria Data Protection Act 2023. This page does not replace professional legal advice.
             </p>
           </CardContent>
         </Card>
