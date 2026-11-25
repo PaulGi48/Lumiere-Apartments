@@ -6,10 +6,6 @@ const { Pool } = pg;
 
 const connectionString = process.env.DATABASE_URL;
 
-if (!connectionString) {
-  throw new Error("DATABASE_URL is required to connect to the Supabase database");
-}
-
 const configuredPoolSize = Number.parseInt(process.env.PG_POOL_MAX ?? "1", 10);
 const poolMax = Number.isFinite(configuredPoolSize) && configuredPoolSize > 0
   ? configuredPoolSize
@@ -18,7 +14,7 @@ const poolMax = Number.isFinite(configuredPoolSize) && configuredPoolSize > 0
 // One client per warm serverless instance; Supabase's transaction pooler
 // shares those clients across the database's backend connections.
 const pool = new Pool({
-  connectionString,
+  ...(connectionString ? { connectionString } : {}),
   max: poolMax,
   idleTimeoutMillis: 10_000,
   connectionTimeoutMillis: 10_000,

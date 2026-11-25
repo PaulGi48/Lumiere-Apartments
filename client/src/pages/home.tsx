@@ -17,7 +17,7 @@ export default function HomePage() {
   const minPrice = searchParams.get("minPrice") ?? "";
   const maxPrice = searchParams.get("maxPrice") ?? "";
 
-  const { data: apartments, isLoading } = useApartments({
+  const { data: apartments, isLoading, isError } = useApartments({
     minPrice: minPrice ? Math.round(Number(minPrice) * 100 / rate) : undefined,
     maxPrice: maxPrice ? Math.round(Number(maxPrice) * 100 / rate) : undefined,
   });
@@ -86,6 +86,10 @@ export default function HomePage() {
             {isLoading ? (
               <div className="flex justify-center rounded-2xl bg-white/95 py-20 shadow-2xl">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
+              </div>
+            ) : isError ? (
+              <div className="rounded-2xl bg-white/95 px-6 py-16 text-center text-muted-foreground shadow-2xl">
+                Apartment listings are temporarily unavailable. Please try again shortly.
               </div>
             ) : apartments && apartments.length > 0 ? (
               <>

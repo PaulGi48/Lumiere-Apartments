@@ -124,6 +124,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const { data: user, error, isLoading } = useQuery<PublicUser | null>({
     queryKey: authQueryKey,
+    // Keep public routes such as password recovery accessible when profile
+    // synchronization is temporarily unavailable.
+    throwOnError: false,
     queryFn: async () => {
       if (supabase) {
         const { data, error: sessionError } = await supabase.auth.getSession();

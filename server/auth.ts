@@ -148,7 +148,15 @@ export function setupAuth(app: Express) {
   app.post("/api/logout", (req, res, next) => {
     req.logout((error) => {
       if (error) return next(error);
-      res.sendStatus(200);
+      req.session.destroy((sessionError) => {
+        if (sessionError) return next(sessionError);
+        res.clearCookie("connect.sid", {
+          path: "/",
+          sameSite: "lax",
+          secure: process.env.NODE_ENV === "production",
+        });
+        res.sendStatus(200);
+      });
     });
   });
 

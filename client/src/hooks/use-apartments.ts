@@ -26,6 +26,9 @@ export function useApartments(filters?: { minPrice?: number; maxPrice?: number; 
   const queryKey = [api.apartments.list.path, filters];
   return useQuery({
     queryKey,
+    // The public landing page should remain usable while the API/database is
+    // unavailable; consumers can render an empty-state message instead.
+    throwOnError: false,
     queryFn: async () => {
       const url = new URL(api.apartments.list.path, window.location.origin);
       if (filters) {

@@ -14,6 +14,7 @@ import ProfilePage from "@/pages/profile";
 import AdminDashboard from "@/pages/admin-dashboard";
 import SupportDashboard from "@/pages/support-dashboard";
 import TermsPage from "@/pages/terms-page";
+import ResetPasswordPage from "@/pages/reset-password";
 import { AppErrorBoundary } from "@/components/error-boundary";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/support" component={SupportDashboard} />
       <Route path="/terms" component={TermsPage} />
+      <Route path="/reset-password" component={ResetPasswordPage} />
       <Route component={NotFound} />
     </Switch>
   );

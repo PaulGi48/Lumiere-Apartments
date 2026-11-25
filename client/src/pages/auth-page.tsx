@@ -11,6 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Layout } from "@/components/layout";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -33,6 +34,11 @@ export default function AuthPage() {
   const [, setLocation] = useLocation();
   const [registrationNotice, setRegistrationNotice] = useState<"confirmation" | "created" | null>(null);
   const [authTab, setAuthTab] = useState<"login" | "register">("login");
+  const [forgotPassword, setForgotPassword] = useState(false);
+  const [resetRequestSent, setResetRequestSent] = useState(false);
+  const [resetRequestError, setResetRequestError] = useState<string | null>(null);
+  const [sendingReset, setSendingReset] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
 
   useEffect(() => {
     if (user) {
@@ -56,6 +62,39 @@ export default function AuthPage() {
     defaultValues: { username: "", password: "", confirmPassword: "", name: "", email: "" }
   });
 
+  const requestPasswordReset = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setResetRequestError(null);
+    setResetRequestSent(false);
+    const email = resetEmail.trim();
+    const parsedEmail = z.string().email("Enter a valid email address").safeParse(email);
+    if (!parsedEmail.success) {
+      setResetRequestError(parsedEmail.error.issues[0]?.message ?? "Enter a valid email address");
+      return;
+    }
+    if (!supabase) {
+      setResetRequestError("Password recovery is not configured. Please contact support.");
+      return;
+    }
+
+    setSendingReset(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) {
+        setResetRequestError(error.message);
+        return;
+      }
+      // Supabase intentionally returns the same result whether or not an account exists.
+      setResetRequestSent(true);
+    } catch (error) {
+      setResetRequestError(error instanceof Error ? error.message : "Could not send a reset link. Please try again.");
+    } finally {
+      setSendingReset(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-muted/30">
@@ -70,7 +109,7 @@ export default function AuthPage() {
             </p>
             <div className="grid grid-cols-2 gap-4 mt-8">
               <div className="bg-background p-4 rounded-lg shadow-sm border">
-                <div className="font-bold text-2xl text-primary mb-1">500+</div>
+                <div className="font-bold text-2xl text-primary mb-1">50+</div>
                 <div className="text-sm text-muted-foreground">Premium Properties</div>
               </div>
               <div className="bg-background p-4 rounded-lg shadow-sm border">
@@ -93,7 +132,44 @@ export default function AuthPage() {
                 </TabsList>
                 
                 <TabsContent value="login">
-                  <Form {...loginForm}>
+                  {forgotPassword ? (
+                    <form onSubmit={requestPasswordReset} className="space-y-4">
+                        <div className="space-y-1 text-center">
+                          <h2 className="font-semibold">Reset your password</h2>
+                          <p className="text-sm text-muted-foreground">Enter your account email and we’ll send a reset link if an account exists.</p>
+                        </div>
+                        {resetRequestSent ? (
+                          <p role="status" className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
+                            If an account exists for that email, a password reset link is on its way. Check your inbox.
+                          </p>
+                        ) : null}
+                        {resetRequestError ? (
+                          <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{resetRequestError}</p>
+                        ) : null}
+                        <div className="space-y-2">
+                          <label htmlFor="reset-email" className="text-sm font-medium leading-none">Email</label>
+                          <Input
+                            id="reset-email"
+                            type="email"
+                            autoComplete="email"
+                            placeholder="you@example.com"
+                            value={resetEmail}
+                            onChange={(event) => {
+                              setResetEmail(event.target.value);
+                              setResetRequestError(null);
+                              setResetRequestSent(false);
+                            }}
+                          />
+                        </div>
+                        <Button type="submit" className="w-full h-11 text-base" disabled={sendingReset}>
+                          {sendingReset ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                          Send reset link
+                        </Button>
+                        <Button type="button" variant="ghost" className="w-full" onClick={() => setForgotPassword(false)}>
+                          Back to sign in
+                        </Button>
+                    </form>
+                  ) : <Form {...loginForm}>
                     <form onSubmit={loginForm.handleSubmit((data) => loginMutation.mutate(data))} className="space-y-4">
                       {registrationNotice ? (
                         <p role="status" className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
@@ -133,12 +209,22 @@ export default function AuthPage() {
                           </FormItem>
                         )}
                       />
+                      <div className="-mt-2 text-right">
+                        <Button type="button" variant="ghost" className="h-auto p-0 text-sm text-primary hover:bg-transparent hover:underline" onClick={() => {
+                          setResetRequestSent(false);
+                          setResetRequestError(null);
+                          setResetEmail(loginForm.getValues("email"));
+                          setForgotPassword(true);
+                        }}>
+                          Forgot password?
+                        </Button>
+                      </div>
                       <Button type="submit" className="w-full h-11 text-base" disabled={loginMutation.isPending}>
                         {loginMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
                         Sign In
                       </Button>
                     </form>
-                  </Form>
+                  </Form>}
                 </TabsContent>
 
                 <TabsContent value="register">

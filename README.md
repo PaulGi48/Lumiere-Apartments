@@ -65,8 +65,14 @@ Four user roles with different permissions:
 - embla-carousel-react for image carousels
 
 ### Authentication
-- Passport.js with passport-local strategy
-- express-session for session management
+- Supabase Auth for email and password sign-in
+- Express sessions link Supabase identities to Lumiere profiles
+- Password recovery emails return to `/reset-password`
+
+#### Password recovery setup
+- In Supabase Dashboard → Authentication → URL Configuration, allow the local callback `http://localhost:5000/reset-password` and the deployed production and preview callback URLs.
+- The app uses the current site origin for the callback, so each origin must be on the Supabase Redirect URLs allowlist.
+- Configure a production SMTP provider in Supabase Auth so reset emails are delivered reliably.
 
 
 ### Environment Variables Required
