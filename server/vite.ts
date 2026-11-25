@@ -35,8 +35,9 @@ export async function setupVite(server: Server, app: Express) {
     // API paths and missing assets return a real 404 instead of index.html.
     if (
       (req.method !== "GET" && req.method !== "HEAD") ||
+      req.path === "/api" ||
       req.path.startsWith("/api/") ||
-      !req.accepts("html")
+      !req.get("accept")?.includes("text/html")
     ) {
       return next();
     }
