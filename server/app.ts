@@ -45,16 +45,12 @@ export function createApp(app: Express = express()): { app: Express; ready: Prom
     next();
   });
 
-  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    console.error("Internal Server Error:", err);
-    if (res.headersSent) return next(err);
-    return res.status(status).json({ message: "Internal Server Error" });
-  });
-
   let ready!: Promise<void>;
   app.use((req, res, next) => {
-    void ready.then(() => next(), next);
+    void ready.then(() => next(), (error) => {
+      console.error("Application startup failed:", error);
+      if (!res.headersSent) res.status(500).json({ message: "Application unavailable" });
+    });
   });
 
   ready = (async () => {
@@ -67,6 +63,15 @@ export function createApp(app: Express = express()): { app: Express; ready: Prom
       const { setupVite } = await import("./vite.js");
       await setupVite(httpServer, app);
     }
+
+    // Keep the error handler after routes and static/Vite middleware so it can
+    // catch errors raised by every preceding handler (Express is order-based).
+    app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
+      const status = err.status || err.statusCode || 500;
+      console.error("Internal Server Error:", err);
+      if (res.headersSent) return next(err);
+      return res.status(status).json({ message: "Internal Server Error" });
+    });
   })();
 
   return { app, ready };

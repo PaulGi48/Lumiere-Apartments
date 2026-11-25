@@ -10,10 +10,33 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, {
+    index: false,
+    setHeaders(res, filePath) {
+      const filename = path.basename(filePath);
+      const hasBuildHash = /-[\w-]{8,}\.[\w]+$/.test(filename);
+      res.setHeader(
+        "Cache-Control",
+        hasBuildHash ? "public, max-age=31536000, immutable" : "public, max-age=3600",
+      );
+    },
+  }));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("/{*path}", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  // Serve the SPA shell for browser navigation while keeping missing API
+  // endpoints and asset requests as real 404s.
+  app.use("/{*path}", (req, res, next) => {
+    if (req.path === "/api" || req.path.startsWith("/api/")) {
+      return res.status(404).json({ message: "API route not found" });
+    }
+
+    const acceptsHtml = req.get("accept")?.includes("text/html");
+    if ((req.method !== "GET" && req.method !== "HEAD") || !acceptsHtml) {
+      return next();
+    }
+
+    res.setHeader("Cache-Control", "no-cache");
+    res.sendFile(path.resolve(distPath, "index.html"), (error) => {
+      if (error) next(error);
+    });
   });
 }

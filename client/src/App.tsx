@@ -1,20 +1,23 @@
+import { lazy, Suspense } from "react";
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/hooks/use-auth";
-import NotFound from "@/pages/not-found";
+import { Loader2 } from "lucide-react";
 
-// Pages
-import HomePage from "@/pages/home";
-import AuthPage from "@/pages/auth-page";
-import ApartmentDetails from "@/pages/apartment-details";
-import ProfilePage from "@/pages/profile";
-import AdminDashboard from "@/pages/admin-dashboard";
-import SupportDashboard from "@/pages/support-dashboard";
-import TermsPage from "@/pages/terms-page";
-import ResetPasswordPage from "@/pages/reset-password";
+// Route-level chunks keep dashboards and their charting dependencies out of
+// the initial customer-facing download.
+const HomePage = lazy(() => import("@/pages/home"));
+const AuthPage = lazy(() => import("@/pages/auth-page"));
+const ApartmentDetails = lazy(() => import("@/pages/apartment-details"));
+const ProfilePage = lazy(() => import("@/pages/profile"));
+const AdminDashboard = lazy(() => import("@/pages/admin-dashboard"));
+const SupportDashboard = lazy(() => import("@/pages/support-dashboard"));
+const TermsPage = lazy(() => import("@/pages/terms-page"));
+const ResetPasswordPage = lazy(() => import("@/pages/reset-password"));
+const NotFound = lazy(() => import("@/pages/not-found"));
 import { AppErrorBoundary } from "@/components/error-boundary";
 import { ThemeProvider } from "@/components/theme-provider";
 
@@ -34,6 +37,20 @@ function Router() {
   );
 }
 
+function RouteLoading() {
+  return (
+    <main
+      className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#f8f5ef] text-[#202a3a]"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <img src="/media/LUMIERE%20LOGO.png" alt="Lumiere Apartments" className="h-16 w-auto object-contain" />
+      <Loader2 className="h-6 w-6 animate-spin text-[#9a7950]" aria-hidden="true" />
+      <p className="text-sm tracking-wide text-[#667085]">Loading your page…</p>
+    </main>
+  );
+}
+
 import { PreloadPage } from "@/components/preload-page";
 
 function App() {
@@ -45,7 +62,9 @@ function App() {
             <PreloadPage>
               <TooltipProvider>
                 <Toaster />
-                <Router />
+                <Suspense fallback={<RouteLoading />}>
+                  <Router />
+                </Suspense>
               </TooltipProvider>
             </PreloadPage>
           </AuthProvider>

@@ -4,7 +4,6 @@ import { type Server } from "http";
 import viteConfig from "../vite.config";
 import fs from "fs";
 import path from "path";
-import { nanoid } from "nanoid";
 
 const viteLogger = createLogger();
 
@@ -32,6 +31,16 @@ export async function setupVite(server: Server, app: Express) {
   app.use(vite.middlewares);
 
   app.use("/{*path}", async (req, res, next) => {
+    // Only browser document requests belong to the SPA fallback. Let unknown
+    // API paths and missing assets return a real 404 instead of index.html.
+    if (
+      (req.method !== "GET" && req.method !== "HEAD") ||
+      req.path.startsWith("/api/") ||
+      !req.accepts("html")
+    ) {
+      return next();
+    }
+
     const url = req.originalUrl;
 
     try {
@@ -44,10 +53,6 @@ export async function setupVite(server: Server, app: Express) {
 
       // always reload the index.html file from disk incase it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
-      template = template.replace(
-        `src="/src/main.tsx"`,
-        `src="/src/main.tsx?v=${nanoid()}"`,
-      );
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
