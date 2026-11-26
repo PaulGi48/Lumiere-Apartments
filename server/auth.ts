@@ -40,9 +40,6 @@ async function getOrCreateAppUser(authUser: SupabaseUser): Promise<User> {
   if (attached) return attached;
 
   if (!authUser.email) throw Object.assign(new Error("A verified email is required."), { status: 400 });
-  const metadata = profileMetadataSchema.safeParse(authUser.user_metadata);
-  if (!metadata.success) throw Object.assign(new Error("The account profile is incomplete. Please register again."), { status: 400 });
-
   // Preserve the existing numeric user ID and its bookings when a verified
   // Supabase account matches one legacy account by email.
   const legacyMatches = await storage.getUsersByEmail(authUser.email);
@@ -57,7 +54,32 @@ async function getOrCreateAppUser(authUser: SupabaseUser): Promise<User> {
     if (linked) return linked;
   }
 
-  const { username, name, phone } = metadata.data;
+  const metadata = profileMetadataSchema.safeParse(authUser.user_metadata);
+  const isGoogleAccount = authUser.app_metadata?.provider === "google"
+    || authUser.identities?.some((identity) => identity.provider === "google") === true;
+  let username: string;
+  let name: string;
+  let phone: string;
+
+  if (metadata.success) {
+    ({ username, name, phone } = metadata.data);
+  } else if (isGoogleAccount) {
+    // Google supplies verified name/email. Username is an internal Lumiere
+    // identifier, so generate it instead of asking for another onboarding form.
+    const googleName = authUser.user_metadata.full_name || authUser.user_metadata.name;
+    name = typeof googleName === "string" && googleName.trim()
+      ? googleName.trim().slice(0, 100)
+      : authUser.email.split("@")[0].slice(0, 100);
+    const emailPrefix = authUser.email.split("@")[0].toLowerCase()
+      .replace(/[^a-z0-9_.-]+/g, "-")
+      .replace(/^[._-]+|[._-]+$/g, "")
+      .slice(0, 24);
+    username = `${emailPrefix || "guest"}-${randomBytes(3).toString("hex")}`;
+    phone = "";
+  } else {
+    throw Object.assign(new Error("The account profile is incomplete. Please register again."), { status: 400 });
+  }
+
   const existingUsername = await storage.getUserByUsername(username);
   if (existingUsername) {
     throw Object.assign(new Error("That username is already in use. Register again with a different username."), { status: 409 });
@@ -109,6 +131,45 @@ export function setupAuth(app: Express) {
       done(null, (await storage.getUser(Number(id))) || false);
     } catch (error) {
       done(error);
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res, next) => {
+    if (!supabase) {
+      return res.status(503).json({ message: "Supabase Auth is not configured." });
+    }
+    const parsed = z.object({
+      identifier: z.string().trim().min(1).max(254),
+      password: z.string().min(1).max(256),
+    }).safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Enter your email or username and password." });
+
+    try {
+      const { identifier, password } = parsed.data;
+      let email = identifier;
+      if (!identifier.includes("@")) {
+        const usernameMatches = await storage.getUsersByUsername(identifier);
+        // Keep the email private and avoid ambiguous lookups where old
+        // usernames differ only by letter casing.
+        email = usernameMatches.length === 1
+          ? usernameMatches[0].email
+          : `${randomBytes(12).toString("hex")}@invalid.lumiere.invalid`;
+      }
+
+      // Use a fresh, non-persistent Auth client for each proxy login. Tokens
+      // are returned only after Supabase validates the supplied password.
+      const authClient = createAuthClient();
+      if (!authClient) return res.status(503).json({ message: "Supabase Auth is not configured." });
+      const { data, error } = await authClient.auth.signInWithPassword({ email, password });
+      if (error || !data.session) {
+        return res.status(401).json({ message: "Invalid email/username or password." });
+      }
+      res.json({
+        accessToken: data.session.access_token,
+        refreshToken: data.session.refresh_token,
+      });
+    } catch (error) {
+      next(error);
     }
   });
 

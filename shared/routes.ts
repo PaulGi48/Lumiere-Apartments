@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { insertUserSchema, insertApartmentSchema, insertBookingSchema, insertMaintenanceSchema, insertPaymentSchema, users, apartments, bookings, maintenanceRequests, payments, type PublicUser } from './schema.js';
+import { insertApartmentSchema, insertBookingSchema, insertMaintenanceSchema, insertPaymentSchema, users, apartments, bookings, maintenanceRequests, payments, type PublicUser } from './schema.js';
 
 export const errorSchemas = {
   validation: z.object({
@@ -19,6 +19,18 @@ export const errorSchemas = {
 
 export const api = {
   auth: {
+    login: {
+      method: 'POST' as const,
+      path: '/api/auth/login',
+      input: z.object({
+        identifier: z.string().trim().min(1).max(254),
+        password: z.string().min(1).max(256),
+      }),
+      responses: {
+        200: z.object({ accessToken: z.string(), refreshToken: z.string() }),
+        401: errorSchemas.unauthorized,
+      },
+    },
     session: {
       method: 'POST' as const,
       path: '/api/auth/session',

@@ -36,7 +36,6 @@ const authQueryKey = [api.auth.me.path];
 const SESSION_TIMEOUT_MS = 15 * 60 * 1000;
 const SESSION_WARNING_MS = 2 * 60 * 1000;
 const SESSION_STARTED_AT_KEY = "lumiere.session.startedAt";
-const PUBLIC_SITE_URL = (import.meta.env.VITE_SITE_URL || "https://lumiere-apartments.vercel.app").replace(/\/+$/, "");
 
 async function readErrorMessage(response: Response, fallback: string) {
   const payload = await response.json().catch(() => null) as { message?: unknown } | null;
@@ -57,12 +56,36 @@ async function createAppSession(accessToken: string): Promise<PublicUser> {
 function useLoginMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (credentials: { email: string; password: string }): Promise<AuthMutationResult> => {
+    mutationFn: async (credentials: { identifier: string; password: string }): Promise<AuthMutationResult> => {
       if (!supabase) throw new Error("Supabase Auth is not configured. Add the project URL and publishable key to .env, then restart the dev server.");
-      const { data, error } = await supabase.auth.signInWithPassword(credentials);
-      if (error) throw new Error(error.message);
-      if (!data.session) throw new Error("Sign-in did not return a session. Confirm your email, then try again.");
-      return { user: await createAppSession(data.session.access_token), needsEmailConfirmation: false };
+      let accessToken: string;
+
+      if (credentials.identifier.includes("@")) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: credentials.identifier.trim(),
+          password: credentials.password,
+        });
+        if (error) throw new Error(error.message);
+        if (!data.session) throw new Error("Sign-in did not return a session. Confirm your email, then try again.");
+        accessToken = data.session.access_token;
+      } else {
+        const response = await fetch(api.auth.login.path, {
+          method: api.auth.login.method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(credentials),
+        });
+        if (!response.ok) throw new Error(await readErrorMessage(response, "Sign-in failed. Please try again."));
+        const tokens = await response.json() as { accessToken: string; refreshToken: string };
+        const { data, error } = await supabase.auth.setSession({
+          access_token: tokens.accessToken,
+          refresh_token: tokens.refreshToken,
+        });
+        if (error) throw new Error(error.message);
+        if (!data.session) throw new Error("Sign-in did not return a session. Please try again.");
+        accessToken = data.session.access_token;
+      }
+
+      return { user: await createAppSession(accessToken), needsEmailConfirmation: false };
     },
     onSuccess: ({ user }) => {
       sessionStorage.setItem(SESSION_STARTED_AT_KEY, String(Date.now()));
@@ -80,7 +103,7 @@ function useRegisterMutation() {
         email: form.email,
         password: form.password,
         options: {
-          emailRedirectTo: `${PUBLIC_SITE_URL}/`,
+          emailRedirectTo: `${window.location.origin}/auth`,
           data: { username: form.username, name: form.name },
         },
       });

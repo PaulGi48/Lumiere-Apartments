@@ -14,7 +14,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 
 const loginSchema = z.object({
-  email: z.string().email("Enter a valid email address"),
+  identifier: z.string().trim().min(1, "Enter your email or username"),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -39,6 +39,8 @@ export default function AuthPage() {
   const [resetRequestError, setResetRequestError] = useState<string | null>(null);
   const [sendingReset, setSendingReset] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -54,7 +56,7 @@ export default function AuthPage() {
 
   const loginForm = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" }
+    defaultValues: { identifier: "", password: "" }
   });
 
   const registerForm = useForm<z.infer<typeof registerSchema>>({
@@ -95,6 +97,28 @@ export default function AuthPage() {
     }
   };
 
+  const continueWithGoogle = async () => {
+    setGoogleError(null);
+    if (!supabase) {
+      setGoogleError("Google sign-in is not configured. Check the Supabase project URL and publishable key.");
+      return;
+    }
+    setGoogleLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${window.location.origin}/auth` },
+      });
+      if (error) {
+        setGoogleError(error.message);
+        setGoogleLoading(false);
+      }
+    } catch (error) {
+      setGoogleError(error instanceof Error ? error.message : "Google sign-in could not be started. Please try again.");
+      setGoogleLoading(false);
+    }
+  };
+
   return (
     <Layout>
       <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center p-4 bg-muted/30">
@@ -125,6 +149,24 @@ export default function AuthPage() {
               <CardDescription>Sign in to manage your bookings or create a customer account.</CardDescription>
             </CardHeader>
             <CardContent>
+              <Button type="button" variant="outline" className="w-full h-11 text-base mb-4" onClick={continueWithGoogle} disabled={googleLoading}>
+                {googleLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : (
+                  <svg className="w-5 h-5 mr-2" viewBox="0 0 48 48" aria-hidden="true">
+                    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.04 13.22l7.98 6.19C11.91 13.72 17.47 9.5 24 9.5Z" />
+                    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.76 7.18l7.73 6C44.42 37.98 46.98 31.9 46.98 24.55Z" />
+                    <path fill="#FBBC05" d="M10.02 28.59A14.4 14.4 0 0 1 9.25 24c0-1.59.27-3.13.77-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.53 2.57 10.78l7.45-5.81Z" />
+                    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.14 1.44-4.88 2.3-8.18 2.3-6.53 0-12.09-4.22-14.08-10.09l-7.45 5.81C6.93 42.62 14.62 48 24 48Z" />
+                  </svg>
+                )}
+                Continue with Google
+              </Button>
+              <p className="text-center text-xs text-muted-foreground mb-4">Google shares your name and email with Lumiere. No extra profile form.</p>
+              {googleError ? <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive mb-4">{googleError}</p> : null}
+              <div className="flex items-center gap-3 mb-5" aria-hidden="true">
+                <div className="h-px flex-1 bg-border" />
+                <span className="text-xs text-muted-foreground">or use email</span>
+                <div className="h-px flex-1 bg-border" />
+              </div>
               <Tabs value={authTab} onValueChange={(value) => setAuthTab(value as "login" | "register")} className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6">
                   <TabsTrigger value="login">Login</TabsTrigger>
@@ -174,7 +216,7 @@ export default function AuthPage() {
                       {registrationNotice ? (
                         <p role="status" className="rounded-md bg-primary/10 px-3 py-2 text-sm text-primary">
                           {registrationNotice === "confirmation"
-                            ? "Account created. Check your email to confirm your address, then sign in below."
+                            ? "Account created. Open the confirmation link in your email; Lumiere will verify your address and sign you in automatically."
                             : "Account created. Sign in below to continue to the booking dashboard."}
                         </p>
                       ) : null}
@@ -185,12 +227,12 @@ export default function AuthPage() {
                       )}
                       <FormField
                         control={loginForm.control}
-                        name="email"
+                        name="identifier"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Email</FormLabel>
+                            <FormLabel>Email or username</FormLabel>
                             <FormControl>
-                              <Input type="email" autoComplete="email" placeholder="you@example.com" {...field} />
+                              <Input type="text" autoComplete="username" placeholder="you@example.com or username" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -213,7 +255,8 @@ export default function AuthPage() {
                         <Button type="button" variant="ghost" className="h-auto p-0 text-sm text-primary hover:bg-transparent hover:underline" onClick={() => {
                           setResetRequestSent(false);
                           setResetRequestError(null);
-                          setResetEmail(loginForm.getValues("email"));
+                          const identifier = loginForm.getValues("identifier");
+                          setResetEmail(identifier.includes("@") ? identifier : "");
                           setForgotPassword(true);
                         }}>
                           Forgot password?
@@ -234,7 +277,7 @@ export default function AuthPage() {
                       registerMutation.mutate(data, {
                         onSuccess: (result) => {
                           setRegistrationNotice(result.needsEmailConfirmation ? "confirmation" : "created");
-                          loginForm.setValue("email", data.email);
+                          loginForm.setValue("identifier", data.email);
                           registerForm.reset();
                           setAuthTab("login");
                         },
